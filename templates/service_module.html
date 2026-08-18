@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}{{ module_title }} · 山河大学{% endblock %}
+{% block breadcrumb %}{{ module_title }}{% endblock %}
+
+{% block content %}
+<section class="sh-dashboard-heading">
+    <div><span class="sh-eyebrow">SHANHE CAMPUS SERVICE</span><h1>{{ module_title }}</h1><p>{{ module_description }}</p></div>
+</section>
+<section class="sh-service-layout" data-module-kind="{{ module_kind }}">
+    <div class="sh-panel sh-service-main">
+        <div class="sh-panel-head"><div><span class="sh-panel-kicker">SERVICE CENTER</span><h3 id="serviceHeading">正在加载服务</h3></div><i id="serviceIcon" class="bi bi-grid"></i></div>
+        <div id="serviceRows" class="sh-service-list"><div class="sh-loading-line">正在读取数据...</div></div>
+    </div>
+    <aside class="sh-panel sh-service-side">
+        <div class="sh-panel-head"><div><span class="sh-panel-kicker">AI SUPPORT</span><h3>智能入口</h3></div><i class="bi bi-stars"></i></div>
+        <p class="sh-service-note">相关问题可直接进入山河智能中枢，由对应专业智能体提供办理指引和个性化建议。</p>
+        <a class="sh-service-link" href="/pages/campus-assistant"><span><i class="bi bi-robot"></i>打开智能中枢</span><i class="bi bi-arrow-up-right"></i></a>
+        {% if module_kind == 'mental-health' %}
+        <form id="moodForm" class="sh-mood-form"><label for="moodScore">今日心情（1-10）</label><input id="moodScore" type="number" min="1" max="10" value="7" required><input id="moodNote" type="text" maxlength="200" placeholder="可以写下一句话感受"><button type="submit"><i class="bi bi-check2"></i>保存打卡</button></form>
+        {% endif %}
+    </aside>
+</section>
+{% endblock %}
+{% block scripts %}<script>window.shanheServiceModule = {{ module_kind|tojson }};</script><script src="/js/service_module.js?v=20260729"></script>{% endblock %}

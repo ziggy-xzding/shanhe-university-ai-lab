@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}业务数据导入{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h3 class="mb-1">业务数据导入</h3>
+    <div class="text-muted">先下载模板并预校验；所有错误修复后才能确认入库。重复确认同一批次不会重复创建数据。</div>
+  </div>
+  <a class="btn btn-outline-primary" href="/pages/university-dashboard">返回工作台</a>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">上传并预校验</div>
+      <div class="card-body">
+        <form id="importForm" class="vstack gap-3">
+          <div>
+            <label class="form-label" for="importKind">导入类型</label>
+            <select class="form-select" name="kind" id="importKind">
+              <option value="students">学生</option>
+              {% if principal.role == "admin" %}
+              <option value="classes">班级</option>
+              <option value="courses">课程</option>
+              <option value="teaching-sections">教学班</option>
+              {% endif %}
+            </select>
+          </div>
+          <div>
+            <label class="form-label" for="importFile">Excel 文件</label>
+            <input id="importFile" class="form-control" name="file" type="file" accept=".xlsx" required>
+          </div>
+          <div class="d-flex gap-2">
+            <a id="templateLink" class="btn btn-outline-secondary" href="/api/university/imports/templates/students">下载模板</a>
+            <button class="btn btn-primary" type="submit">预校验</button>
+          </div>
+        </form>
+        <div class="form-text mt-3">学生导入要求学院、专业、班级已存在；学院管理员仅能导入本人学院学生，并且只能确认自己预校验的批次。</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">批次结果</div>
+      <div class="card-body">
+        <div id="importSummary" class="text-muted">请选择模板并上传 .xlsx 文件。</div>
+        <button id="confirmImport" class="btn btn-success mt-3 d-none">确认入库</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mt-3">
+  <div class="card-header">预校验错误明细</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead><tr><th>行号</th><th>字段</th><th>问题</th></tr></thead>
+        <tbody id="importErrors"><tr><td colspan="3" class="text-center text-muted py-4">尚未执行预校验</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<div id="importNotice" class="alert d-none mt-3" role="alert"></div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+const importKind = document.getElementById('importKind');
+const importForm = document.getElementById('importForm');
+const templateLink = document.getElementById('templateLink');
+const importSummary = document.getElementById('importSummary');
+const importErrors = document.getElementById('importErrors');
+const confirmImport = document.getElementById('confirmImport');
+const importNotice = document.getElementById('importNotice');
+let currentBatch = null;
+
+function importUrl(kind) {
+  return kind === 'students' ? '/api/university/imports/students/preview' : `/api/university/imports/${kind}/preview`;
+}
+function confirmUrl(kind, batchId) {
+  return kind === 'students' ? `/api/university/imports/${batchId}/confirm` : `/api/university/imports/${kind}/${batchId}/confirm`;
+}
+function showImportNotice(message, type = 'info') {
+  importNotice.className = `alert alert-${type} mt-3`;
+  importNotice.textContent = message;
+}
+function updateTemplate() {
+  templateLink.href = `/api/university/imports/templates/${importKind.value}`;
+}
+function renderErrors(errors) {
+  importErrors.innerHTML = '';
+  errors.forEach(error => {
+    const row = document.createElement('tr');
+    [error.row_number, error.field, error.message].forEach(value => {
+      const cell = document.createElement('td');
+      cell.textContent = value;
+      row.append(cell);
+    });
+    importErrors.append(row);
+  });
+  if (!importErrors.children.length) {
+    importErrors.innerHTML = '<tr><td colspan="3" class="text-center text-success py-4">预校验通过，没有发现错误</td></tr>';
+  }
+}
+
+importKind.addEventListener('change', updateTemplate);
+importForm.addEventListener('submit', async event => {
+  event.preventDefault();
+  const formData = new FormData(importForm);
+  const kind = formData.get('kind');
+  try {
+    const response = await fetch(importUrl(kind), {method: 'POST', body: formData});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || '预校验失败');
+    currentBatch = {kind, batchId: data.batch_id};
+    renderErrors(data.errors || []);
+    importSummary.textContent = `批次 #${data.batch_id}：${(data.errors || []).length ? '存在校验错误，请修复后重新上传。' : '预校验通过，可确认入库。'}`;
+    confirmImport.classList.toggle('d-none', (data.errors || []).length > 0 || data.status === 'confirmed');
+  } catch (error) {
+    currentBatch = null;
+    confirmImport.classList.add('d-none');
+    showImportNotice(error.message, 'danger');
+  }
+});
+confirmImport.addEventListener('click', async () => {
+  if (!currentBatch) return;
+  try {
+    const response = await fetch(confirmUrl(currentBatch.kind, currentBatch.batchId), {method: 'POST'});
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || '确认入库失败');
+    confirmImport.classList.add('d-none');
+    showImportNotice(`入库完成：新建 ${data.created || 0} 条，跳过 ${data.skipped || 0} 条。`, 'success');
+  } catch (error) {
+    showImportNotice(error.message, 'danger');
+  }
+});
+updateTemplate();
+</script>
+{% endblock %}

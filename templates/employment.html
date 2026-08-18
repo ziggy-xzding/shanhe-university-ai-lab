@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}就业管理{% endblock %}
+{% block content %}
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span>🔍 筛选条件</span>
+        <button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 新增就业</button>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-2">
+            <div class="col-md-2"><input name="student_name" class="form-control form-control-sm" placeholder="学生姓名" value="{{ student_name or '' }}"></div>
+            <div class="col-md-2"><input name="company" class="form-control form-control-sm" placeholder="公司名" value="{{ company or '' }}"></div>
+            <div class="col-md-2"><input name="min_salary" type="number" class="form-control form-control-sm" placeholder="最低薪资" value="{{ min_salary or '' }}"></div>
+            <div class="col-md-2"><input name="max_salary" type="number" class="form-control form-control-sm" placeholder="最高薪资" value="{{ max_salary or '' }}"></div>
+            <div class="col-md-1 d-flex align-items-center">
+                <input type="checkbox" name="include_deleted" id="inc_del" {% if include_deleted %}checked{% endif %}>
+                <label for="inc_del" class="form-check-label ms-1 small">含已删</label>
+            </div>
+            <div class="col-md-1"><button class="btn btn-primary btn-sm w-100">搜索</button></div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">📊 就业记录（{{ rows|length }} 条）</div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr><th>学号</th><th>学生</th><th>班级编号</th><th>公司</th><th>薪资</th><th>Offer时间</th><th>状态</th><th>操作</th></tr>
+            </thead>
+            <tbody>
+            {% for row in rows %}
+            <tr class="{{ 'table-secondary' if row.is_deleted }}">
+                <td>{{ row.student_no or '-' }}</td>
+                <td>{{ row.student_name or '-' }}</td>
+                <td>{{ row.class_no or '-' }}</td>
+                <td>{{ row.company or '-' }}</td>
+                <td>{{ "%.0f"|format(row.salary) if row.salary else '-' }}</td>
+                <td>{{ row.offer_time.strftime('%Y-%m-%d') if row.offer_time else '-' }}</td>
+                <td>
+                    {% if row.is_deleted %}<span class="badge bg-danger">已删除</span>
+                    {% else %}<span class="badge bg-success">正常</span>{% endif %}
+                </td>
+                <td>
+                    {% if not row.is_deleted %}
+                    <button class="btn btn-sm btn-outline-primary" onclick="editRow('{{ row.id }}','{{ row.student_no }}','{{ row.student_name or '' }}','{{ row.class_no or '' }}','{{ row.company or '' }}',{{ row.salary or 0 }},'{{ row.open_time or '' }}','{{ row.offer_time or '' }}')"><i class="bi-pencil"></i></button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="delRow('{{ row.id }}')"><i class="bi-trash"></i></button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 弹窗 -->
+<div class="modal fade" id="empModal" tabindex="-1">
+    <div class="modal-dialog"><div class="modal-content">
+        <div class="modal-header"><h5 class="modal-title" id="mTitle">新增就业</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="eId">
+            <div class="mb-2"><label class="form-label small">学号</label><input id="fNo" class="form-control form-control-sm"></div>
+            <div class="mb-2"><label class="form-label small">学生姓名</label><input id="fName" class="form-control form-control-sm"></div>
+            <div class="mb-2"><label class="form-label small">班级编号</label><input id="fClass" class="form-control form-control-sm" placeholder="CLS001"></div>
+            <div class="mb-2"><label class="form-label small">公司</label><input id="fCo" class="form-control form-control-sm"></div>
+            <div class="mb-2"><label class="form-label small">月薪</label><input id="fSal" type="number" class="form-control form-control-sm"></div>
+            <div class="row mb-2"><div class="col"><label class="form-label small">开始</label><input id="fOpen" type="datetime-local" class="form-control form-control-sm"></div><div class="col"><label class="form-label small">Offer</label><input id="fOffer" type="datetime-local" class="form-control form-control-sm"></div></div>
+        </div>
+        <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+    </div></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const modal = new bootstrap.Modal('#empModal');
+function openCreate(){ document.getElementById('mTitle').textContent='新增就业';document.getElementById('eId').value='';['fNo','fName','fClass','fCo','fSal','fOpen','fOffer'].forEach(i=>document.getElementById(i).value='');modal.show(); }
+function editRow(id,no,name,cls,co,sal,open,offer){ document.getElementById('mTitle').textContent='编辑就业';document.getElementById('eId').value=id;document.getElementById('fNo').value=no;document.getElementById('fName').value=name;document.getElementById('fClass').value=cls;document.getElementById('fCo').value=co;document.getElementById('fSal').value=sal||'';document.getElementById('fOpen').value=open||'';document.getElementById('fOffer').value=offer||'';modal.show(); }
+async function save(){
+    var id=document.getElementById('eId').value, no=document.getElementById('fNo').value;
+    var body={student_no:no,student_name:document.getElementById('fName').value,class_no:document.getElementById('fClass').value,company:document.getElementById('fCo').value,salary:Number(document.getElementById('fSal').value)||null,open_time:document.getElementById('fOpen').value||null,offer_time:document.getElementById('fOffer').value||null};
+    var url=id?'/employment/'+id:'/employment/students/'+no;
+    var method=id?'PUT':'POST';
+    var res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(res.ok){modal.hide();location.reload();}else{var e=await res.json();var msg=e.detail;if(Array.isArray(msg)){msg=msg.map(function(i){return i.msg;}).join('\n');}alert(msg||'操作失败');}
+}
+async function delRow(id){ if(!confirm('确认删除?'))return;var res=await fetch('/employment/'+id,{method:'DELETE'});if(res.ok)location.reload();else alert('删除失败'); }
+</script>
+{% endblock %}

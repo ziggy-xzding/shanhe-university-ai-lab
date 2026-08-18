@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}选课中心{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">选课中心</h3><div class="text-muted">选择开放教学班；系统将自动检查选课时间、容量与课表冲突。</div></div><a class="btn btn-outline-primary" href="/pages/university-dashboard">返回工作台</a></div>
+<div id="selectionNotice" class="alert d-none"></div>
+<div class="row g-3"><div class="col-12"><div class="card"><div class="card-header">可选教学班</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>课程</th><th>学分</th><th>容量</th><th>课表</th><th></th></tr></thead><tbody id="availableSections"><tr><td colspan="5" class="text-center text-muted py-4">正在加载…</td></tr></tbody></table></div></div></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const selectionNotice=document.getElementById('selectionNotice'); function note(text,type='info'){selectionNotice.className=`alert alert-${type}`;selectionNotice.textContent=text;}
+const WEEKDAYS=['','周一','周二','周三','周四','周五','周六','周日'];
+function formatTimetable(slots){
+  if(!Array.isArray(slots)||!slots.length)return '时间待定';
+  return slots.map(slot=>{const day=WEEKDAYS[Number(slot.day)]||`第${slot.day}天`;const start=slot.start||'';const end=slot.end||'';return `${day} ${start}${end?`-${end}`:''}`;}).join('、');
+}
+function text(value){return value==null?'':String(value)}
+async function load(){ const available=await fetch('/api/university/sections'); const availableData=await available.json(); const body=document.getElementById('availableSections'); body.innerHTML=''; (availableData.items||[]).forEach(item=>{const row=document.createElement('tr'); [item.course_name+' ('+item.course_code+')',item.credits,`${item.enrolled_count}/${item.capacity}`,formatTimetable(item.timetable)].forEach(value=>{const cell=document.createElement('td');cell.textContent=String(value);row.append(cell);}); const action=document.createElement('td'); const button=document.createElement('button');button.className='btn btn-sm btn-primary';button.textContent='选课';button.onclick=()=>enroll(item.section_id);action.append(button);row.append(action);body.append(row);}); if(!body.children.length) body.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">暂无开放教学班</td></tr>'; }
+async function enroll(id){const response=await fetch(`/api/university/sections/${id}/enrollments`,{method:'POST'});const data=await response.json();if(!response.ok)return note(data.detail||'选课失败','danger');note('选课成功','success');load();} load().catch(error=>note(error.message,'danger'));
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}{% block title %}班级管理{% endblock %}{% block content %}
+<div class="card"><div class="card-header d-flex justify-content-between"><span>🏫 班级列表（{{ rows|length }} 个）</span><button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 新增班级</button></div>
+<div class="card-body p-0"><table class="table table-hover mb-0">
+<thead><tr><th>编号</th><th>班级名</th><th>开课时间</th><th>班主任</th><th>授课老师</th><th>学生数</th><th>操作</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+<td><code>{{ r.class_no }}</code></td><td><strong>{{ r.name }}</strong></td>
+<td>{{ r.start_date.strftime('%Y-%m-%d') if r.start_date else '-' }}</td>
+<td>{{ r.head_teacher_name or '-' }}</td><td>{{ r.instructor_name or '-' }}</td><td>{{ r.student_count or 0 }}</td>
+<td>
+<button class="btn btn-sm btn-outline-primary" onclick="editRow('{{ r.class_no }}','{{ r.name }}','{{ r.start_date.strftime('%Y-%m-%dT%H:%M') if r.start_date else '' }}',{{ r.head_teacher_id or 0 }},{{ r.instructor_id or 0 }})"><i class="bi-pencil"></i></button>
+<button class="btn btn-sm btn-outline-danger" onclick="delRow('{{ r.class_no }}')"><i class="bi-trash"></i></button>
+</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="modal fade" id="myModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title" id="mTitle">新增班级</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<input type="hidden" id="eNo">
+<div class="mb-2"><label class="form-label small">班级编号</label><input id="fNo" class="form-control form-control-sm" placeholder="CLS004"></div>
+<div class="mb-2"><label class="form-label small">班级名称</label><input id="fName" class="form-control form-control-sm" placeholder="AI0620班"></div>
+<div class="mb-2"><label class="form-label small">开课时间</label><input id="fDate" type="datetime-local" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">班主任ID</label><input id="fHead" type="number" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">授课老师ID</label><input id="fInst" type="number" class="form-control form-control-sm"></div>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+</div></div></div>
+{% endblock %}{% block scripts %}
+<script>
+const modal=new bootstrap.Modal('#myModal');
+function openCreate(){ document.getElementById('mTitle').textContent='新增班级';document.getElementById('eNo').value='';['fNo','fName','fDate','fHead','fInst'].forEach(i=>document.getElementById(i).value='');modal.show(); }
+function editRow(no,name,date,head,inst){ document.getElementById('mTitle').textContent='编辑班级';document.getElementById('eNo').value=no;document.getElementById('fNo').value=no;document.getElementById('fName').value=name;document.getElementById('fDate').value=date;document.getElementById('fHead').value=head||'';document.getElementById('fInst').value=inst||'';modal.show(); }
+async function save(){
+var no=document.getElementById('eNo').value;
+var body={class_no:document.getElementById('fNo').value,name:document.getElementById('fName').value,start_date:document.getElementById('fDate').value||null,head_teacher_id:Number(document.getElementById('fHead').value)||null,instructor_id:Number(document.getElementById('fInst').value)||null};
+var url=no?'/classes/'+no:'/classes';
+var res=await fetch(url,{method:no?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(res.ok){modal.hide();location.reload();}else{var e=await res.json();alert(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail));}
+}
+async function delRow(no){ if(!confirm('确认删除?'))return;var res=await fetch('/classes/'+no,{method:'DELETE'});if(res.ok)location.reload();else alert('删除失败'); }
+</script>{% endblock %}

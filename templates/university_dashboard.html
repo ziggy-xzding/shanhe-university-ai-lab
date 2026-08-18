@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% set role_name = {'admin': '校园系统管理员', 'college_admin': '学院管理员', 'academic_admin': '教务管理员', 'student_affairs': '学生事务老师', 'counselor': '辅导员', 'teacher': '任课教师', 'archive_admin': '档案管理员', 'staff': '教职工', 'student': '学生'}[principal.role] %}
+{% set workspace_name = '学生模块' if principal.role == 'student' else '教师模块' if principal.role == 'teacher' else '校园工作台' %}
+{% block title %}{{ workspace_name }} · 山河大学{% endblock %}
+{% block breadcrumb %}{{ workspace_name }}{% endblock %}
+{% block content %}
+<section class="sh-dashboard-heading">
+    <div>
+        <div class="sh-eyebrow"><span></span> 山河大学 · 数字校园</div>
+        <h1>你好，{{ principal.display_name }}</h1>
+        <p>欢迎进入{{ workspace_name }}。今天也愿你心中有方向，脚下有山河。</p>
+    </div>
+    <div class="sh-date-chip"><i class="bi bi-calendar3"></i><span id="todayLabel">今天</span></div>
+</section>
+
+<section class="sh-dashboard-banner" aria-label="系统状态">
+    <div class="sh-banner-symbol"><i class="bi bi-compass"></i></div>
+    <div><span class="sh-banner-kicker">山河无恙 · 服务在线</span><h2>{{ workspace_name }}</h2><p>你的权限已加载完成，下面是当前身份可以使用的全部相关服务。</p></div>
+    <div class="sh-banner-state"><span></span>系统运行正常</div>
+</section>
+
+<section class="sh-stat-grid" aria-label="工作台概览">
+    <article class="sh-stat-card sh-stat-teal"><div class="sh-stat-icon"><i class="bi bi-grid-1x2"></i></div><strong>{{ modules|length }}</strong><span>可用业务模块</span><small>按当前身份自动展示</small></article>
+    <article class="sh-stat-card sh-stat-jade"><div class="sh-stat-icon"><i class="bi bi-shield-check"></i></div><strong>安全</strong><span>身份认证状态</span><small>登录令牌有效</small></article>
+    <article class="sh-stat-card sh-stat-gold"><div class="sh-stat-icon"><i class="bi bi-clock-history"></i></div><strong>实时</strong><span>校园服务状态</span><small>数据连接稳定</small></article>
+    <article class="sh-stat-card sh-stat-coral"><div class="sh-stat-icon"><i class="bi bi-person-check"></i></div><strong>{{ role_name }}</strong><span>当前身份</span><small>{{ principal.subject_id }}</small></article>
+</section>
+
+<section class="sh-section-head"><div><span class="sh-eyebrow"><span></span> 工作空间</span><h2>常用校园服务</h2></div><span class="sh-section-count">{{ modules|length }} 项服务</span></section>
+<section class="sh-module-grid" aria-label="业务模块">
+    {% for module in modules %}
+    <a class="sh-module-card" href="{{ module.href }}">
+        <div class="sh-module-icon"><i class="bi {{ module.icon }}"></i></div>
+        <div class="sh-module-copy"><strong>{{ module.label }}</strong><span>进入{{ module.label }}</span></div>
+        <i class="bi bi-arrow-up-right sh-module-arrow"></i>
+    </a>
+    {% else %}
+    <div class="sh-empty-panel"><i class="bi bi-inbox"></i><p>当前身份暂未配置业务模块</p></div>
+    {% endfor %}
+</section>
+
+<section class="sh-lower-grid">
+    <article class="sh-panel sh-todo-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">QUICK ACCESS</span><h3>待办与提醒</h3></div><i class="bi bi-list-check"></i></div><div class="sh-todo-list"><div><span class="sh-todo-mark teal"><i class="bi bi-check2"></i></span><p><strong>身份验证已完成</strong><small>你可以开始处理今日校园事务</small></p><span class="sh-todo-time">刚刚</span></div><div><span class="sh-todo-mark gold"><i class="bi bi-calendar-event"></i></span><p><strong>查看本周工作安排</strong><small>从左侧选择对应业务模块</small></p><span class="sh-todo-time">今日</span></div><div><span class="sh-todo-mark coral"><i class="bi bi-bell"></i></span><p><strong>保持通知畅通</strong><small>重要校务通知会在顶部提醒</small></p><span class="sh-todo-time">提醒</span></div></div></article>
+    <article class="sh-panel sh-quote-panel"><div class="sh-quote-mark">“</div><p>山河无恙，不只是远方的愿景，也是每一次认真工作、认真学习之后，校园里真实发生的日常。</p><div><span class="sh-quote-rule"></span><small>山河大学 · 今日寄语</small></div></article>
+</section>
+{% endblock %}
+{% block scripts %}
+<script>
+const today = new Intl.DateTimeFormat('zh-CN', {year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'}).format(new Date());
+document.getElementById('todayLabel').textContent = today;
+</script>
+{% endblock %}

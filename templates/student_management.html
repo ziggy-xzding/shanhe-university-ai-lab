@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}学生档案管理{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">学生档案管理</h3><div class="text-muted">按学院权限分页查询学生基础学籍信息；批量新增支持 Excel 文件上传。</div></div><a class="btn btn-outline-primary" href="/pages/data-import">上传学生数据</a></div>
+<div class="card"><div class="card-body"><form id="studentSearch" class="row g-2 align-items-end"><div class="col-md-5"><label class="form-label">学号或姓名</label><input class="form-control" name="keyword" placeholder="输入学号或姓名"></div><div class="col-md-2"><button class="btn btn-primary w-100">查询</button></div></form></div></div>
+<div class="card mt-3"><div class="card-header d-flex justify-content-between"><span>学生列表</span><span id="studentTotal" class="text-muted"></span></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>学号</th><th>姓名</th><th>学院</th><th>专业</th><th>班级</th><th>年级</th><th>状态</th></tr></thead><tbody id="studentRows"><tr><td colspan="7" class="text-center text-muted py-4">正在加载…</td></tr></tbody></table></div></div></div>
+<div class="d-flex justify-content-between align-items-center mt-3"><button class="btn btn-outline-secondary" id="previousPage">上一页</button><span id="pageInfo" class="text-muted"></span><button class="btn btn-outline-secondary" id="nextPage">下一页</button></div>
+<div class="card mt-3">
+  <div class="card-header">学籍信息维护</div>
+  <div class="card-body">
+    <form id="academicProfileForm" class="row g-2 align-items-end">
+      <div class="col-md-3"><label class="form-label" for="profileStudentNo">学号</label><input id="profileStudentNo" class="form-control" name="student_no" required></div>
+      <div class="col-md-3"><label class="form-label" for="profileStatus">学籍状态</label><select id="profileStatus" class="form-select" name="status" required><option value="active">在读</option><option value="suspended">休学</option><option value="withdrawn">退学</option><option value="graduated">毕业</option></select></div>
+      <div class="col-md-3"><label class="form-label" for="profilePhone">联系电话</label><input id="profilePhone" class="form-control" name="phone" maxlength="20"></div>
+      <div class="col-md-3"><button class="btn btn-primary w-100">保存学籍信息</button></div>
+    </form>
+    <div class="form-text mt-2">学院管理员仅能更新本学院学生；系统管理员可更新全校学生。</div>
+  </div>
+</div>
+<div id="studentNotice" class="alert d-none mt-3"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const studentRows=document.getElementById('studentRows');const studentTotal=document.getElementById('studentTotal');const pageInfo=document.getElementById('pageInfo');const studentNotice=document.getElementById('studentNotice');let currentPage=1;let totalPages=1;
+function showStudentNotice(message,type='danger'){studentNotice.className=`alert alert-${type} mt-3`;studentNotice.textContent=message;}
+async function loadStudents(){try{const keyword=new FormData(document.getElementById('studentSearch')).get('keyword');const params=new URLSearchParams({page:String(currentPage),page_size:'20'});if(keyword)params.set('keyword',keyword);const response=await fetch(`/api/university/students?${params}`);const data=await response.json();if(!response.ok)throw new Error(data.detail||'学生数据加载失败');studentRows.innerHTML='';data.items.forEach(item=>{const row=document.createElement('tr');[item.student_no,item.name,item.college_name,item.major_name,item.class_name||item.class_no||'',item.grade,item.status].forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);});studentRows.append(row);});if(!studentRows.children.length)studentRows.innerHTML='<tr><td colspan="7" class="text-center text-muted py-4">暂无符合条件的学生</td></tr>';studentTotal.textContent=`共 ${data.total} 人`;totalPages=Math.max(1,Math.ceil(data.total/data.page_size));pageInfo.textContent=`第 ${data.page} / ${totalPages} 页`;document.getElementById('previousPage').disabled=currentPage<=1;document.getElementById('nextPage').disabled=currentPage>=totalPages;}catch(error){showStudentNotice(error.message);}}
+document.getElementById('studentSearch').addEventListener('submit',event=>{event.preventDefault();currentPage=1;loadStudents();});document.getElementById('previousPage').addEventListener('click',()=>{if(currentPage>1){currentPage--;loadStudents();}});document.getElementById('nextPage').addEventListener('click',()=>{if(currentPage<totalPages){currentPage++;loadStudents();}});loadStudents();
+</script>
+<script>
+document.getElementById('academicProfileForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const values = Object.fromEntries(new FormData(form).entries());
+  const response = await fetch(`/api/university/students/${encodeURIComponent(values.student_no)}/academic-profile`, {
+    method: 'PATCH',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({status: values.status, phone: values.phone || null}),
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    showStudentNotice(data.detail || '学籍信息更新失败');
+    return;
+  }
+  showStudentNotice(`已更新 ${data.student_no} 的学籍信息。`, 'success');
+  loadStudents();
+});
+</script>
+{% endblock %}

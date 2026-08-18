@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#112d46">
+    <title>统一身份认证 · 山河大学</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/shanhe.css?v=20260728" rel="stylesheet">
+</head>
+<body class="sh-login-page">
+<header class="sh-login-header">
+    <div class="sh-login-wordmark">
+        <div class="sh-brand-mark"><img src="/img/shanhe-crest.svg" alt="山河大学校徽"></div>
+        <div><strong>山河大学</strong><span>SHANHE UNIVERSITY</span></div>
+    </div>
+</header>
+
+<main class="sh-login-layout">
+    <section class="sh-login-intro" aria-labelledby="login-page-title">
+        <div class="sh-login-kicker">UNIFIED IDENTITY SERVICE</div>
+        <h1 id="login-page-title">山河无恙，<br><span>安心求学</span></h1>
+        <p>山河大学统一身份认证服务。教职工使用工号或账号，学生使用学号登录，系统会根据账号身份自动打开对应工作台。</p>
+        <div class="sh-login-seal">
+            <div class="sh-login-seal-mark">山河<br>大学</div>
+            <span>崇山仰止 · 纳川致远<br>面向每一位山河人的数字校园</span>
+        </div>
+    </section>
+
+    <section class="sh-login-card" aria-labelledby="login-card-title">
+        <div class="sh-login-card-header">
+            <h2 id="login-card-title">登录山河大学</h2>
+            <p>请输入账号和密码，进入你的专属工作空间</p>
+        </div>
+        <form id="unifiedLoginForm" class="sh-login-form" novalidate>
+            <div class="sh-field">
+                <label for="account">账号 / 学号</label>
+                <div class="sh-field-control">
+                    <i class="bi bi-person" aria-hidden="true"></i>
+                    <input id="account" name="account" type="text" inputmode="text" autocomplete="username" maxlength="50" placeholder="输入工号、账号或学号" required>
+                </div>
+            </div>
+            <div class="sh-field">
+                <label for="password">密码</label>
+                <div class="sh-field-control">
+                    <i class="bi bi-lock" aria-hidden="true"></i>
+                    <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" placeholder="输入登录密码" required>
+                    <button id="passwordToggle" class="sh-password-toggle" type="button" aria-label="显示密码"><i class="bi bi-eye"></i></button>
+                </div>
+            </div>
+            <div class="sh-login-meta">
+                <label class="sh-checkbox"><input type="checkbox" name="remember" value="1"><span>在本机记住账号</span></label>
+                <span class="sh-login-help">账号由学校统一发放</span>
+            </div>
+            <p id="loginMessage" class="sh-login-message" role="alert" aria-live="polite"></p>
+            <button id="loginSubmit" class="sh-login-submit" type="submit"><span>登录</span><i class="bi bi-arrow-up-right"></i></button>
+        </form>
+        <p class="sh-login-note"><i class="bi bi-shield-check"></i> 统一认证保护你的校园数据。请勿在公共设备上保存密码，遇到异常登录请联系信息化服务中心。</p>
+    </section>
+</main>
+<footer class="sh-login-footer"><span>山河大学信息化建设处</span><span>© 2026 Shanhe University</span></footer>
+
+<script>
+const form = document.getElementById('unifiedLoginForm');
+const account = document.getElementById('account');
+const password = document.getElementById('password');
+const message = document.getElementById('loginMessage');
+const submit = document.getElementById('loginSubmit');
+const toggle = document.getElementById('passwordToggle');
+
+toggle.addEventListener('click', () => {
+    const visible = password.type === 'text';
+    password.type = visible ? 'password' : 'text';
+    toggle.setAttribute('aria-label', visible ? '显示密码' : '隐藏密码');
+    toggle.innerHTML = `<i class="bi ${visible ? 'bi-eye' : 'bi-eye-slash'}"></i>`;
+});
+
+form.addEventListener('submit', async event => {
+    event.preventDefault();
+    message.textContent = '';
+    if (!account.value.trim() || !password.value) {
+        message.textContent = '请输入账号和密码后再登录。';
+        (!account.value.trim() ? account : password).focus();
+        return;
+    }
+    submit.disabled = true;
+    submit.querySelector('span').textContent = '正在验证';
+    submit.querySelector('i').className = 'bi bi-arrow-repeat';
+    try {
+        const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({account: account.value.trim(), password: password.value})
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || '账号或密码不正确，请重试');
+        message.className = 'sh-login-message is-success';
+        message.textContent = `验证成功，正在进入${data.role === 'student' ? '学生工作台' : '山河工作台'}…`;
+        location.assign(data.redirect_to);
+    } catch (error) {
+        message.className = 'sh-login-message';
+        message.textContent = error.message;
+        submit.disabled = false;
+        submit.querySelector('span').textContent = '登录';
+        submit.querySelector('i').className = 'bi bi-arrow-up-right';
+    }
+});
+</script>
+</body>
+</html>

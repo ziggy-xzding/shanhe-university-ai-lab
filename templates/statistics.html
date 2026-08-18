@@ -1,0 +1,66 @@
+{% extends "base.html" %}{% block title %}统计看板{% endblock %}{% block content %}
+<h4 class="mb-3">📈 统计分析看板</h4>
+
+<!-- 基本信息统计 -->
+<h6 class="text-muted mb-3">📋 基本信息统计</h6>
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card"><div class="card-header">👴 超过30岁学员（{{ overage|length }}人）</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>学号</th><th>姓名</th><th>年龄</th><th>性别</th><th>班级</th></tr></thead>
+        <tbody>{% for r in overage %}<tr><td><code>{{ r.student_no }}</code></td><td>{{ r.name }}</td><td class="text-danger fw-bold">{{ r.age }}</td><td>{{ r.gender }}</td><td>{{ r.class_name or '-' }}</td></tr>{% endfor %}{% if not overage %}<tr><td colspan="5" class="text-muted text-center">暂无数据</td></tr>{% endif %}</tbody></table></div></div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card"><div class="card-header">👫 班级性别统计</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>班级</th><th>总人数</th><th>男生</th><th>女生</th></tr></thead>
+        <tbody>{% for r in gender_stats %}<tr><td>{{ r.class_name }}</td><td class="fw-bold">{{ r.total }}</td><td>{{ r.male }}</td><td>{{ r.female }}</td></tr>{% endfor %}</tbody></table></div></div>
+    </div>
+</div>
+
+<!-- 成绩统计 -->
+<h6 class="text-muted mb-3">📝 成绩统计</h6>
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <div class="card"><div class="card-header">🌟 每次考试80分以上（{{ above80|length }}人）</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>学号</th><th>姓名</th><th>班级</th><th>均分</th><th>成绩明细</th></tr></thead>
+        <tbody>{% for r in above80 %}<tr><td><code>{{ r.student_no }}</code></td><td>{{ r.student_name }}</td><td>{{ r.class_name or '-' }}</td><td class="text-success fw-bold">{{ r.avg_score }}</td><td class="small">{{ r.scores }}</td></tr>{% endfor %}{% if not above80 %}<tr><td colspan="5" class="text-muted text-center">暂无数据</td></tr>{% endif %}</tbody></table></div></div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card"><div class="card-header">⚠️ 2次以上不及格（{{ failed|length }}人）</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>姓名</th><th>班级</th><th>不及格次数</th><th>不及格分数</th></tr></thead>
+        <tbody>{% for r in failed %}<tr><td>{{ r.student_name }}</td><td>{{ r.class_name or '-' }}</td><td class="text-danger fw-bold">{{ r.fail_count }}次</td><td class="small">{{ r.fail_scores }}</td></tr>{% endfor %}{% if not failed %}<tr><td colspan="4" class="text-muted text-center">暂无数据</td></tr>{% endif %}</tbody></table></div></div>
+    </div>
+    <div class="col-12">
+        <div class="card"><div class="card-header">📊 每次考试班级平均分</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>考试序次</th><th>班级</th><th>平均分</th></tr></thead>
+        <tbody>{% for r in class_avg_score %}<tr><td>第{{ r.exam_seq }}次</td><td>{{ r.class_name }}</td><td class="fw-bold">{{ r.avg_score }}</td></tr>{% endfor %}{% if not class_avg_score %}<tr><td colspan="3" class="text-muted text-center">暂无数据</td></tr>{% endif %}</tbody></table></div></div>
+    </div>
+</div>
+
+<!-- 就业统计 -->
+<h6 class="text-muted mb-3">💼 就业统计</h6>
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card"><div class="card-header">💰 薪资TOP5</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>#</th><th>学生</th><th>公司</th><th class="text-end">薪资</th></tr></thead>
+        <tbody>{% for r in top5 %}<tr><td>{{ loop.index }}</td><td>{{ r.student_name }}</td><td>{{ r.company or '-' }}</td><td class="text-end fw-bold">{{ "%.0f"|format(r.salary) if r.salary else '-' }}</td></tr>{% endfor %}</tbody></table></div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card"><div class="card-header">⏱️ 班级平均就业时长</div>
+        <div class="card-body p-0"><table class="table table-sm mb-0">
+        <thead><tr><th>班级</th><th class="text-end">平均天数</th></tr></thead>
+        <tbody>{% for r in class_avg %}<tr><td>{{ r.class_name }}</td><td class="text-end"><span class="badge bg-info">{{ r.avg_duration_days }}天</span></td></tr>{% endfor %}</tbody></table></div></div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card"><div class="card-header">📅 个人就业时长</div>
+        <div class="card-body p-0" style="max-height:300px;overflow-y:auto"><table class="table table-sm mb-0">
+        <thead><tr><th>学生</th><th class="text-end">天数</th></tr></thead>
+        <tbody>{% for r in durations %}<tr><td>{{ r.student_name }}</td><td class="text-end"><span class="badge bg-info">{{ r.duration_days }}天</span></td></tr>{% endfor %}</tbody></table></div></div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}山河智能中枢{% endblock %}
+{% block breadcrumb %}山河智能中枢{% endblock %}
+
+{% block content %}
+<section class="sh-dashboard-heading">
+    <div><span class="sh-eyebrow">MULTI-AGENT WORKSPACE</span><h1>山河智能中枢</h1><p>由主智能体统一理解任务，协调教务、辅导员、生活、就业、心理、学习和安全七大专业智能体。</p></div>
+    <div class="sh-heading-actions"><span class="sh-live-chip"><span></span>多智能体在线</span></div>
+</section>
+
+<section class="sh-agent-hero">
+    <div class="sh-agent-orbit" aria-hidden="true"><span></span><span></span><span></span><i class="bi bi-stars"></i></div>
+    <div class="sh-agent-hero-copy"><span class="sh-panel-kicker">PRIMARY ORCHESTRATOR</span><h2>山河主智能体</h2><p>识别你的意图，调用合适的子智能体，并把结果整理成一份可执行的回答。</p></div>
+    <div class="sh-agent-hero-status"><i class="bi bi-diagram-3"></i><span>任务编排<br><strong>已就绪</strong></span></div>
+</section>
+
+<section class="sh-agent-workspace">
+    <div class="sh-agent-chat sh-panel">
+        <div class="sh-panel-head"><div><span class="sh-panel-kicker">CONVERSATION</span><h3>和主智能体对话</h3></div><i class="bi bi-chat-left-quote"></i></div>
+        <div id="multiAgentMessages" class="sh-agent-messages" aria-live="polite"></div>
+        <form id="multiAgentForm" class="sh-agent-form">
+            <label class="visually-hidden" for="multiAgentInput">输入问题</label>
+            <textarea id="multiAgentInput" maxlength="2000" rows="2" placeholder="例如：桃园三结义是哪三个人？或查询我的成绩" required></textarea>
+            <button type="submit" aria-label="发送问题" title="发送问题"><i class="bi bi-arrow-up-right"></i></button>
+        </form>
+    </div>
+    <aside class="sh-agent-side">
+        <div class="sh-panel">
+            <div class="sh-panel-head"><div><span class="sh-panel-kicker">SPECIALISTS</span><h3>子智能体</h3></div><i class="bi bi-diagram-3"></i></div>
+            <div id="subAgentList" class="sh-sub-agent-list"><div class="sh-loading-line">正在连接智能体...</div></div>
+        </div>
+        <div class="sh-panel sh-source-panel">
+            <div class="sh-panel-head"><div><span class="sh-panel-kicker">KNOWLEDGE BASE</span><h3>知识库</h3></div><i class="bi bi-bookshelf"></i></div>
+            <div id="bookList" class="sh-book-list"><div class="sh-loading-line">正在读取书籍...</div></div>
+            <div id="bookUploadBox" class="sh-book-upload d-none"><label for="bookName">书名</label><input id="bookName" value="新教材" maxlength="80"><input id="bookFile" type="file" accept=".txt,.pdf,.docx"><button id="bookUploadButton" type="button"><i class="bi bi-upload"></i>上传书籍</button><small>上传后由知识检索子智能体解析</small></div>
+        </div>
+    </aside>
+</section>
+{% endblock %}
+
+{% block scripts %}<script src="/js/multi_agent.js?v=20260819"></script>{% endblock %}

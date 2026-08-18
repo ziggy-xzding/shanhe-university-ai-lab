@@ -1,0 +1,86 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+
+# Python environments, caches, and build output
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+*.egg-info/
+build/
+dist/
+*.so
+.pytest_cache/
+pytest-run/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.mypy_cache/
+.hypothesis/
+
+# IDEs, local agents, and OS files
+.idea/
+.vscode/
+.claude/
+.superpowers/
+.agents/
+.playwright-cli/
+terminals/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and runtime output
+*.log
+*.out
+*.err
+output/
+*.pid
+codex-clipboard-*.png
+
+# Local databases and database exports
+*.sqlite
+*.sqlite3
+*.db
+*.bak
+ai0522_backup.sql
+*.sql.gz
+
+# Generated application data and model indexes
+data/archive_files/
+data/knowledge_books/*
+!data/knowledge_books/.gitkeep
+data/faiss/*
+!data/faiss/.gitkeep
+data/novels/
+data/*.json
+volumes/
+
+# Local reference images, private requirement scratch files, and exports
+新建文件夹/
+*.xlsx
+*.xls
+*.csv
+*.zip
+
+# Packaging and documentation build output
+MANIFEST
+*.manifest
+*.spec
+site/
+docs/_build/
+

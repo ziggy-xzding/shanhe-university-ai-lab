@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block title %}学生管理{% endblock %}{% block content %}
+<div class="card"><div class="card-header d-flex justify-content-between"><span>👥 学生列表（{{ rows|length }} 人）</span><button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 新增学生</button></div>
+<div class="card-body"><form method="get" class="row g-2 mb-2">
+<div class="col-md-3"><input name="name" class="form-control form-control-sm" placeholder="姓名搜索" value="{{ name or '' }}"></div>
+<div class="col-md-2"><select name="class_id" class="form-select form-select-sm"><option value="">全部班级</option>{% for c in classes %}<option value="{{ c.id }}" {% if class_id==c.id|string %}selected{% endif %}>{{ c.name }}</option>{% endfor %}</select></div>
+<div class="col-md-1"><button class="btn btn-primary btn-sm">搜索</button></div>
+</form></div>
+<div class="card-body p-0 pt-0"><table class="table table-hover mb-0">
+<thead><tr><th>学号</th><th>姓名</th><th>班级</th><th>年龄</th><th>性别</th><th>学历</th><th>专业</th><th>就业</th><th>操作</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+<td><code>{{ r.student_no }}</code></td><td><strong>{{ r.name }}</strong></td><td>{{ r.class_name or '-' }}</td><td>{{ r.age or '-' }}</td><td>{{ r.gender or '-' }}</td>
+<td>{{ r.education or '-' }}</td><td>{{ r.major or '-' }}</td>
+<td>{% if r.employed %}<span class="badge bg-success">已就业</span>{% else %}<span class="badge bg-secondary">未就业</span>{% endif %}</td>
+<td>
+<button class="btn btn-sm btn-outline-primary" onclick="editRow('{{ r.student_no }}','{{ r.name }}',{{ r.class_id or 0 }})"><i class="bi-pencil"></i></button>
+<button class="btn btn-sm btn-outline-danger" onclick="delRow('{{ r.student_no }}')"><i class="bi-trash"></i></button>
+</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="modal fade" id="myModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title" id="mTitle">新增学生</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="eNo">
+<div class="row"><div class="col-6 mb-2"><label class="form-label small">学号</label><input id="fNo" class="form-control form-control-sm"></div><div class="col-6 mb-2"><label class="form-label small">姓名</label><input id="fName" class="form-control form-control-sm"></div></div>
+<div class="mb-2"><label class="form-label small">班级ID</label><input id="fClass" type="number" class="form-control form-control-sm"></div>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+</div></div></div>
+{% endblock %}{% block scripts %}
+<script>
+const modal=new bootstrap.Modal('#myModal');
+function openCreate(){ document.getElementById('mTitle').textContent='新增学生';document.getElementById('eNo').value='';['fNo','fName','fClass'].forEach(i=>document.getElementById(i).value='');modal.show(); }
+function editRow(no,name,cid){ document.getElementById('mTitle').textContent='编辑学生';document.getElementById('eNo').value=no;document.getElementById('fNo').value=no;document.getElementById('fName').value=name;document.getElementById('fClass').value=cid||'';modal.show(); }
+async function save(){
+var no=document.getElementById('eNo').value;
+var body={student_no:document.getElementById('fNo').value,name:document.getElementById('fName').value,class_id:Number(document.getElementById('fClass').value)||null};
+var url=no?'/students/'+no:'/students';
+var res=await fetch(url,{method:no?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(res.ok){modal.hide();location.reload();}else{var e=await res.json();alert(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail));}
+}
+async function delRow(no){ if(!confirm('确认删除?'))return;var res=await fetch('/students/'+no,{method:'DELETE'});if(res.ok)location.reload();else alert('删除失败'); }
+</script>{% endblock %}

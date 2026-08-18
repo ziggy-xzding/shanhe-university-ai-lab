@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}三国问答 — 沃林学生管理系统{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="/css/qa.css">
+
+<div class="qa-page">
+    <!-- 头部 -->
+    <div class="qa-header">
+        <h5><i class="bi-chat-square-text me-2"></i>三国演义 · 知识问答</h5>
+        <span id="statusBadge" class="qa-status-badge qa-status-empty">
+            <i class="bi-hourglass-split me-1"></i>检查中...
+        </span>
+    </div>
+
+    <!-- 消息区域 -->
+    <div class="qa-messages" id="qaMessages">
+        <div class="qa-empty" id="qaEmpty">
+            <div class="qa-empty-icon">🐉</div>
+            <div class="qa-empty-title">欢迎来到三国演义知识问答</div>
+            <div class="qa-empty-sub">你可以问我任何关于《三国演义》的问题，我会从原著中查找相关段落进行回答。</div>
+            <div class="qa-suggestions" id="qaSuggestions">
+                <span class="qa-suggestion-chip" data-q="桃园三结义是哪三个人？">桃园三结义是哪三个人？</span>
+                <span class="qa-suggestion-chip" data-q="关羽的兵器是什么？">关羽的兵器是什么？</span>
+                <span class="qa-suggestion-chip" data-q="诸葛亮北伐几次？">诸葛亮北伐几次？</span>
+                <span class="qa-suggestion-chip" data-q="官渡之战曹操击败了谁？">官渡之战曹操击败了谁？</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="qa-input-area">
+        <div class="qa-input-row">
+            <textarea id="qaInput" rows="1"
+                      placeholder="输入你的问题，按 Enter 发送..."
+                      onkeydown="handleKey(event)"></textarea>
+            <button class="qa-send-btn" id="qaSendBtn" onclick="sendMessage()"
+                    title="发送">
+                <i class="bi-send"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+// ── 初始化 ──────────────────────────────────────────
+let isSending = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadStatus();
+    // 点击建议问题
+    document.querySelectorAll('.qa-suggestion-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            const q = this.dataset.q;
+            document.getElementById('qaInput').value = q;
+            sendMessage();
+        });
+    });
+    document.getElementById('qaInput').focus();
+});
+
+// ── 发送消息 ───────────────────────────────────────
+async function sendMessage() {
+    if (isSending) return;
+    const input = document.getElementById('qaInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    isSending = true;
+    hideEmpty();
+    renderUserMessage(question);
+    input.value = '';
+    autoResize(input);
+    showLoading();
+
+    try {
+        const res = await fetch('/api/rag/sanguo/ask', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question: question, top_k: 5})
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.detail || '问答服务暂时不可用');
+        }
+        removeLoading();
+        renderAiMessage(
+            data.answer,
+            data.qa_sources || [],
+            data.document_sources || []
+        );
+    } catch (err) {
+        removeLoading();
+        renderSystemMessage('请求失败: ' + err.message);
+    }
+    isSending = false;
+    scrollBottom();
+}
+
+// ── 加载知识库状态 ─────────────────────────────────
+async function loadStatus() {
+    try {
+        const res = await fetch('/api/rag/status');
+        const data = await res.json();
+        const badge = document.getElementById('statusBadge');
+        if (data.ready) {
+            badge.className = 'qa-status-badge qa-status-ready';
+            badge.innerHTML = '<i class="bi-check-circle me-1"></i>知识库就绪 ('
+                + data.document_count + ' 个切片 / ' + data.qa_count + ' 条问答)';
+        } else {
+            badge.className = 'qa-status-badge qa-status-empty';
+            badge.innerHTML = '<i class="bi-exclamation-triangle me-1"></i>'
+                + escapeHtml(data.message || '知识库未初始化');
+        }
+    } catch (err) {
+        document.getElementById('statusBadge').innerHTML = '<i class="bi-x-circle me-1"></i>状态获取失败';
+    }
+}
+
+// ── 渲染消息 ──────────────────────────────────────
+function hideEmpty() {
+    const el = document.getElementById('qaEmpty');
+    if (el) el.style.display = 'none';
+}
+
+function renderUserMessage(text) {
+    const html = `<div class="qa-message qa-message-user">
+        <div class="qa-bubble">${escapeHtml(text)}</div>
+    </div>`;
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend', html);
+    scrollBottom();
+}
+
+function renderAiMessage(answer, qaSources, documentSources) {
+    const sourcesHtml = renderSources(qaSources, documentSources);
+    const formatted = simpleMarkdown(answer);
+    const html = `<div class="qa-message qa-message-ai">
+        <div class="qa-bubble">${formatted}</div>
+        ${sourcesHtml}
+    </div>`;
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend', html);
+    scrollBottom();
+}
+
+function renderSystemMessage(text) {
+    const html = `<div class="qa-message qa-message-system">
+        <div class="qa-bubble">${escapeHtml(text)}</div>
+    </div>`;
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend', html);
+    scrollBottom();
+}
+
+function renderSources(qaSources, documentSources) {
+    const qaItems = qaSources.map((s, index) => {
+        const chapter = escapeHtml(s.source_chapter || '未标注章节');
+        return `<div class="qa-source-item">
+            <div class="qa-source-meta"><span>问答 ${index + 1}</span><span>${chapter}</span></div>
+            <div><strong>${escapeHtml(s.question)}</strong></div>
+            <div>${escapeHtml(s.answer)}</div>
+            <div class="text-muted mt-1">依据：${escapeHtml(s.evidence || s.explanation || '')}</div>
+        </div>`;
+    }).join('');
+
+    const documentItems = documentSources.map((s, index) => {
+        const chapter = escapeHtml(s.chapter || '未标注章节');
+        return `<div class="qa-source-item">
+            <div class="qa-source-meta"><span>原文 ${index + 1}</span><span>${escapeHtml(s.book_name)}</span><span>${chapter}</span></div>
+            <div>${escapeHtml(s.content).substring(0, 260)}${s.content.length > 260 ? '…' : ''}</div>
+        </div>`;
+    }).join('');
+
+    const total = qaSources.length + documentSources.length;
+    if (total === 0) return '';
+    return `<div class="qa-sources">
+        <span class="qa-sources-toggle" onclick="toggleSources(this)">
+            <i class="bi-chevron-down"></i> 查看来源 (${total} 条)
+        </span>
+        <div class="qa-sources-panel">
+            ${qaItems ? '<div class="qa-source-group-title">问答参考</div>' + qaItems : ''}
+            ${documentItems ? '<div class="qa-source-group-title">原文参考</div>' + documentItems : ''}
+        </div>
+    </div>`;
+}
+
+function toggleSources(el) {
+    const panel = el.nextElementSibling;
+    const icon = el.querySelector('i');
+    panel.classList.toggle('show');
+    if (panel.classList.contains('show')) {
+        icon.className = 'bi-chevron-up';
+    } else {
+        icon.className = 'bi-chevron-down';
+    }
+}
+
+// ── 加载指示器 ────────────────────────────────────
+function showLoading() {
+    const html = `<div class="qa-loading" id="qaLoading">
+        <span></span><span></span><span></span>
+    </div>`;
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend', html);
+    scrollBottom();
+}
+
+function removeLoading() {
+    const el = document.getElementById('qaLoading');
+    if (el) el.remove();
+}
+
+// ── 工具函数 ──────────────────────────────────────
+function scrollBottom() {
+    const el = document.getElementById('qaMessages');
+    setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+}
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+    autoResize(e.target);
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+function simpleMarkdown(text) {
+    text = escapeHtml(text || '');
+    // 粗体 **text** → <strong>
+    text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    // 换行
+    text = text.replace(/\n/g, '<br>');
+    // --- 分隔线
+    text = text.replace(/---/g, '<hr style="margin:6px 0;border-color:#e5e7eb">');
+    return text;
+}
+</script>
+{% endblock %}

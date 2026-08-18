@@ -1,0 +1,37 @@
+{% extends "base.html" %}{% block title %}教师管理{% endblock %}{% block content %}
+<div class="card"><div class="card-header d-flex justify-content-between"><span>👨‍🏫 教师列表（{{ rows|length }} 人）</span><button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 新增教师</button></div>
+<div class="card-body p-0"><table class="table table-hover mb-0">
+<thead><tr><th>ID</th><th>姓名</th><th>电话</th><th>科目</th><th>状态</th><th>操作</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+<td>{{ r.tid }}</td><td><strong>{{ r.tname }}</strong></td><td>{{ r.tphone }}</td><td>{{ r.tsubject }}</td>
+<td>{% if r.t_code=='在职' %}<span class="badge bg-success">在职</span>{% elif r.t_code=='离职' %}<span class="badge bg-danger">离职</span>{% else %}<span class="badge bg-secondary">{{ r.t_code }}</span>{% endif %}</td>
+<td>
+<button class="btn btn-sm btn-outline-primary" onclick="editRow('{{ r.tid }}','{{ r.tname }}','{{ r.tphone }}','{{ r.tsubject }}','{{ r.t_code }}')"><i class="bi-pencil"></i></button>
+<button class="btn btn-sm btn-outline-danger" onclick="delRow('{{ r.tid }}')"><i class="bi-trash"></i></button>
+</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="modal fade" id="myModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title" id="mTitle">新增教师</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<input type="hidden" id="eId"><input type="hidden" id="eCode">
+<div class="mb-2"><label class="form-label small">姓名</label><input id="fName" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">电话</label><input id="fPhone" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">科目</label><input id="fSubject" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">状态</label><select id="fCode" class="form-select form-select-sm"><option value="在职">在职</option><option value="离职">离职</option><option value="停用">停用</option></select></div>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+</div></div></div>
+{% endblock %}{% block scripts %}
+<script>
+const modal=new bootstrap.Modal('#myModal');
+function openCreate(){ document.getElementById('mTitle').textContent='新增教师';document.getElementById('eId').value='';['fName','fPhone','fSubject'].forEach(i=>document.getElementById(i).value='');modal.show(); }
+function editRow(id,name,phone,subject,code){ document.getElementById('mTitle').textContent='编辑教师';document.getElementById('eId').value=id;document.getElementById('fName').value=name;document.getElementById('fPhone').value=phone;document.getElementById('fSubject').value=subject;document.getElementById('fCode').value=code;modal.show(); }
+async function save(){
+var id=document.getElementById('eId').value;
+var body={tname:document.getElementById('fName').value,tphone:document.getElementById('fPhone').value,tsubject:document.getElementById('fSubject').value,t_code:document.getElementById('fCode').value};
+var url=id?'/teacher/teacher/'+id:'/teacher/teachercrate';
+var res=await fetch(url,{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(res.ok){modal.hide();location.reload();}else{var e=await res.json();alert(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail));}
+}
+async function delRow(id){ if(!confirm('确认删除?'))return;var res=await fetch('/teacher/teacher/'+id,{method:'DELETE'});if(res.ok)location.reload();else alert('删除失败'); }
+</script>{% endblock %}

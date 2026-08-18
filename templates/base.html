@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#12324d">
+    <title>{% block title %}山河大学 · 统一工作台{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/css/shanhe.css?v=20260728" rel="stylesheet">
+</head>
+<body class="sh-app">
+{% set role = principal.role if principal is defined and principal else 'guest' %}
+{% set role_label = {'admin': '校园系统管理员', 'college_admin': '学院管理员', 'academic_admin': '教务管理员', 'student_affairs': '学生事务老师', 'counselor': '辅导员', 'teacher': '任课教师', 'archive_admin': '档案管理员', 'staff': '教职工', 'student': '学生'}[role] if role != 'guest' else '访客' %}
+{% set identity_label = '学号' if role == 'student' else '工号' %}
+<div class="sh-mobile-scrim" data-nav-scrim></div>
+<aside class="sh-sidebar" data-sidebar>
+    <div class="sh-brand">
+        <div class="sh-brand-mark"><img src="/img/shanhe-crest.svg" alt="山河大学校徽"></div>
+        <div>
+            <strong>山河大学</strong>
+            <span>SHANHE UNIVERSITY</span>
+        </div>
+    </div>
+    <div class="sh-motto"><span class="sh-motto-line"></span><span>崇山仰止 · 纳川致远</span></div>
+    {% if role != 'guest' %}
+    <nav class="sh-nav" aria-label="主导航">
+        {% for section in nav_sections|default(()) %}
+        <div class="sh-nav-label">{{ section.label }}</div>
+        {% for module in section.modules %}
+        <a class="sh-nav-link {{ 'active' if request.url.path == module.href }}" href="{{ module.href }}">
+            <i class="bi {{ module.icon }}"></i><span>{{ module.label }}</span>
+        </a>
+        {% endfor %}
+        {% endfor %}
+        {% if agent_module %}
+        <a class="sh-nav-link sh-nav-agent-link {{ 'active' if request.url.path == agent_module.href }}" href="{{ agent_module.href }}">
+            <i class="bi {{ agent_module.icon }}"></i><span>{{ agent_module.label }}</span><em>AI</em>
+        </a>
+        {% endif %}
+    </nav>
+    {% endif %}
+    <div class="sh-sidebar-footer">
+        <div class="sh-status-dot"></div>
+        <div><strong>山河服务正常</strong><span>统一身份认证已连接</span></div>
+    </div>
+</aside>
+
+<div class="sh-main-shell">
+    <header class="sh-topbar">
+        <button class="sh-icon-button sh-menu-button" data-nav-toggle type="button" aria-label="打开导航" aria-expanded="false"><i class="bi bi-list"></i></button>
+        <div class="sh-breadcrumb"><span>山河大学</span><i class="bi bi-chevron-right"></i><strong>{% block breadcrumb %}统一工作台{% endblock %}</strong></div>
+        <div class="sh-topbar-actions">
+            <label class="sh-search" aria-label="搜索功能"><i class="bi bi-search"></i><input type="search" placeholder="搜索项目、用户或通知" /></label>
+            <button class="sh-icon-button" type="button" aria-label="查看通知"><i class="bi bi-bell"></i><span class="sh-notice-dot"></span></button>
+            {% if role != 'guest' %}
+            <div class="sh-account">
+                <div class="sh-avatar">{{ principal.display_name[:1] }}</div>
+                <div class="sh-account-copy"><strong>{{ principal.display_name }}</strong><span>{{ role_label }}</span><small>{{ identity_label }} {{ principal.subject_id }}</small></div>
+            </div>
+            <button class="sh-logout" data-logout type="button"><i class="bi bi-box-arrow-right"></i><span>退出</span></button>
+            {% endif %}
+        </div>
+    </header>
+    <main class="sh-content">{% block content %}{% endblock %}</main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(() => {
+    const sidebar = document.querySelector('[data-sidebar]');
+    const scrim = document.querySelector('[data-nav-scrim]');
+    const toggle = document.querySelector('[data-nav-toggle]');
+    const closeNav = () => { sidebar?.classList.remove('is-open'); scrim?.classList.remove('is-visible'); toggle?.setAttribute('aria-expanded', 'false'); };
+    toggle?.addEventListener('click', () => { const open = sidebar.classList.toggle('is-open'); scrim?.classList.toggle('is-visible', open); toggle.setAttribute('aria-expanded', String(open)); });
+    scrim?.addEventListener('click', closeNav);
+    document.querySelectorAll('.sh-nav-link').forEach(link => link.addEventListener('click', closeNav));
+    document.querySelector('[data-logout]')?.addEventListener('click', async () => { await fetch('/api/auth/logout', {method: 'POST'}); location.assign('/pages/login'); });
+})();
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

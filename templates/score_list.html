@@ -1,0 +1,40 @@
+{% extends "base.html" %}{% block title %}成绩管理{% endblock %}{% block content %}
+<div class="card"><div class="card-header d-flex justify-content-between"><span>📊 成绩列表（{{ rows|length }} 条）</span><button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 录入成绩</button></div>
+<div class="card-body"><form method="get" class="row g-2 mb-2"><div class="col-md-3"><input name="student_no" class="form-control form-control-sm" placeholder="学号" value="{{ student_no or '' }}"></div><div class="col-md-1"><button class="btn btn-primary btn-sm">搜索</button></div></form></div>
+<div class="card-body p-0 pt-0"><table class="table table-hover mb-0">
+<thead><tr><th>学号</th><th>姓名</th><th>考试序次</th><th>分数</th><th>状态</th><th>操作</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+<td><code>{{ r.student_no }}</code></td><td><strong>{{ r.student_name }}</strong></td><td>第{{ r.exam_seq }}次</td>
+<td>{% if r.score >= 80 %}<span class="text-success fw-bold">{{ r.score }}</span>{% elif r.score >= 60 %}<span class="text-warning fw-bold">{{ r.score }}</span>{% else %}<span class="text-danger fw-bold">{{ r.score }}</span>{% endif %}</td>
+<td>{% if r.score >= 80 %}<span class="badge bg-success">优秀</span>{% elif r.score >= 60 %}<span class="badge bg-warning">及格</span>{% else %}<span class="badge bg-danger">不及格</span>{% endif %}</td>
+<td>
+<button class="btn btn-sm btn-outline-primary" onclick="editRow('{{ r.student_no }}',{{ r.exam_seq }},{{ r.score }})"><i class="bi-pencil"></i></button>
+<button class="btn btn-sm btn-outline-danger" onclick="delRow('{{ r.student_no }}',{{ r.exam_seq }})"><i class="bi-trash"></i></button>
+</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="modal fade" id="myModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title" id="mTitle">录入成绩</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="eNo"><input type="hidden" id="eSeq">
+<div class="mb-2"><label class="form-label small">学号</label><input id="fNo" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">考试序次</label><input id="fSeq" type="number" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">分数</label><input id="fScore" type="number" step="0.1" class="form-control form-control-sm"></div>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+</div></div></div>
+{% endblock %}{% block scripts %}
+<script>
+const modal=new bootstrap.Modal('#myModal');
+function openCreate(){ document.getElementById('mTitle').textContent='录入成绩';document.getElementById('eNo').value='';document.getElementById('eSeq').value='';['fNo','fSeq','fScore'].forEach(i=>document.getElementById(i).value='');modal.show(); }
+function editRow(no,seq,score){ document.getElementById('mTitle').textContent='编辑成绩';document.getElementById('eNo').value=no;document.getElementById('eSeq').value=seq;document.getElementById('fNo').value=no;document.getElementById('fSeq').value=seq;document.getElementById('fScore').value=score;modal.show(); }
+async function save(){
+var no=document.getElementById('eNo').value, seq=document.getElementById('eSeq').value;
+var body={student_no:document.getElementById('fNo').value,exam_seq:Number(document.getElementById('fSeq').value),score:Number(document.getElementById('fScore').value)};
+var oldNo=document.getElementById('eNo').value, oldSeq=document.getElementById('eSeq').value;
+var url=oldNo?'/score/':'/score/';
+var method=oldNo?'PUT':'POST';
+if(oldNo&&(oldNo!=body.student_no||oldSeq!=body.exam_seq)){ body.old_student_no=oldNo;body.old_exam_seq=oldSeq; }
+var res=await fetch(url,{method:method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(res.ok){modal.hide();location.reload();}else{var e=await res.json();alert(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail));}
+}
+async function delRow(no,seq){ if(!confirm('确认删除?'))return;var res=await fetch('/score/'+no+'/'+seq,{method:'DELETE'});if(res.ok)location.reload();else alert('删除失败'); }
+</script>{% endblock %}

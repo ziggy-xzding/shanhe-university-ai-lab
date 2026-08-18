@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}仪表盘 — 沃林学生管理系统{% endblock %}
+{% block content %}
+
+<h4 class="mb-4">📊 系统概览</h4>
+
+<!-- 统计卡片 -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color:#4e73df">
+            <div class="d-flex justify-content-between align-items-center">
+                <div><small class="text-muted">学生总数</small><h4 class="mb-0">{{ stats.students }}</h4></div>
+                <i class="bi-people icon text-primary"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color:#1cc88a">
+            <div class="d-flex justify-content-between align-items-center">
+                <div><small class="text-muted">已就业</small><h4 class="mb-0">{{ stats.employed }}</h4></div>
+                <i class="bi-briefcase icon text-success"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color:#f6c23e">
+            <div class="d-flex justify-content-between align-items-center">
+                <div><small class="text-muted">教师人数</small><h4 class="mb-0">{{ stats.teachers }}</h4></div>
+                <i class="bi-person-badge icon text-warning"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card stat-card p-3" style="border-left-color:#e74a3b">
+            <div class="d-flex justify-content-between align-items-center">
+                <div><small class="text-muted">班级数量</small><h4 class="mb-0">{{ stats.classes }}</h4></div>
+                <i class="bi-building icon text-danger"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- 薪资 TOP5 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">💰 就业薪资 TOP5</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>#</th><th>学生</th><th>公司</th><th class="text-end">薪资</th></tr></thead>
+                    <tbody>
+                    {% for row in top5 %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ row.student_name }}</td>
+                        <td>{{ row.company or '-' }}</td>
+                        <td class="text-end"><strong>{{ "%.0f"|format(row.salary) if row.salary else '-' }}</strong></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 班级平均就业时长 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">⏱️ 班级平均就业时长</div>
+            <div class="card-body p-0">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>班级</th><th class="text-end">平均天数</th></tr></thead>
+                    <tbody>
+                    {% for row in class_avg %}
+                    <tr>
+                        <td>{{ row.class_name }}</td>
+                        <td class="text-end"><span class="badge bg-info">{{ row.avg_duration_days }} 天</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 学生分布 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">👥 学生就业状态</div>
+            <div class="card-body">
+                <div class="d-flex justify-content-around text-center">
+                    <div>
+                        <h3 class="text-success mb-0">{{ stats.employed }}</h3>
+                        <small class="text-muted">已就业</small>
+                    </div>
+                    <div>
+                        <h3 class="text-secondary mb-0">{{ stats.unemployed }}</h3>
+                        <small class="text-muted">未就业</small>
+                    </div>
+                    <div>
+                        <h3 class="text-muted mb-0">{{ stats.employment_rate }}%</h3>
+                        <small class="text-muted">就业率</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 快捷入口 -->
+    <div class="col-lg-6">
+        <div class="card">
+            <div class="card-header">⚡ 快捷操作</div>
+            <div class="card-body">
+                <div class="row g-2">
+                    <div class="col-6"><a href="/pages/students" class="btn btn-outline-primary w-100"><i class="bi-people"></i> 学生管理</a></div>
+                    <div class="col-6"><a href="/pages/employment" class="btn btn-outline-success w-100"><i class="bi-briefcase"></i> 就业管理</a></div>
+                    <div class="col-6"><a href="/pages/scores" class="btn btn-outline-warning w-100"><i class="bi-bar-chart"></i> 成绩管理</a></div>
+                    <div class="col-6"><a href="/pages/statistics" class="btn btn-outline-info w-100"><i class="bi-graph-up"></i> 统计看板</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

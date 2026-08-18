@@ -1,0 +1,399 @@
+{% extends "base.html" %}{% block title %}顾问管理{% endblock %}{% block content %}
+
+<div class="card">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <span>💼 顾问列表（<span id="total-count">{{ rows|length }}</span> 人）</span>
+    <div class="d-flex gap-2">
+      <input id="searchInput" class="form-control form-control-sm" style="width:180px" placeholder="搜索姓名/编号/部门…" oninput="filterAndRender()">
+      <button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 新增顾问</button>
+      <button class="btn btn-outline-info btn-sm" onclick="openBatch()"><i class="bi-upload"></i> 批量导入</button>
+      <button class="btn btn-outline-secondary btn-sm position-relative" onclick="openRecycleBin()">
+        <i class="bi-trash2"></i> 回收站
+        <span id="recycleBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="card-body p-0">
+    <table class="table table-hover mb-0" id="mainTable">
+      <thead>
+        <tr><th>编号</th><th>姓名</th><th>性别</th><th>电话</th><th>邮箱</th><th>部门</th><th>职称</th><th>区域</th><th>操作</th></tr>
+      </thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- 分页 -->
+  <div class="card-footer d-flex justify-content-between align-items-center py-2">
+    <small class="text-muted">共 <span id="filtered-count">{{ rows|length }}</span> 条，每页
+      <select id="pageSizeSelect" class="form-select form-select-sm d-inline-block" style="width:70px" onchange="goPage(1)">
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="50">50</option>
+      </select> 条
+    </small>
+    <nav><ul class="pagination pagination-sm mb-0" id="pagination"></ul></nav>
+  </div>
+</div>
+
+<!-- 新增/编辑 Modal -->
+<div class="modal fade" id="myModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="mTitle">新增顾问</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body"><input type="hidden" id="eId">
+    <div class="row">
+      <div class="col-6 mb-2">
+        <label class="form-label small">顾问编号 <span class="text-danger">*</span><small class="text-muted d-none ms-1" id="fNoHint">（编辑时不可修改）</small></label>
+        <input id="fNo" class="form-control form-control-sm">
+      </div>
+      <div class="col-6 mb-2"><label class="form-label small">姓名 <span class="text-danger">*</span></label><input id="fName" class="form-control form-control-sm"></div>
+    </div>
+    <div class="row">
+      <div class="col-6 mb-2"><label class="form-label small">性别</label><select id="fGender" class="form-select form-select-sm"><option>男</option><option>女</option></select></div>
+      <div class="col-6 mb-2"><label class="form-label small">电话 <span class="text-danger">*</span></label><input id="fPhone" class="form-control form-control-sm"></div>
+    </div>
+    <div class="mb-2"><label class="form-label small">邮箱</label><input id="fEmail" class="form-control form-control-sm"></div>
+    <div class="row">
+      <div class="col-4 mb-2">
+        <label class="form-label small">部门 <span class="text-danger">*</span></label>
+        <select id="fDept" class="form-select form-select-sm"><option value="">-- 请选择部门 --</option></select>
+      </div>
+      <div class="col-4 mb-2"><label class="form-label small">职称 <span class="text-danger">*</span></label><input id="fTitle" class="form-control form-control-sm"></div>
+      <div class="col-4 mb-2"><label class="form-label small">区域</label><input id="fRegion" class="form-control form-control-sm"></div>
+    </div>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+</div></div></div>
+
+<!-- 批量导入 Modal -->
+<div class="modal fade" id="batchModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">📦 批量导入顾问</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <small class="text-muted">粘贴 JSON 数组，格式示例：</small>
+    <pre class="bg-light p-2 rounded small mt-1">[{"consultant_no":"CON005","name":"张三","gender":"男","phone":"13900000001","email":"zs@example.com","dept_no":"DEPT001","title":"顾问","region":"华东"}]</pre>
+    <textarea id="batchText" class="form-control form-control-sm mt-1" rows="7" placeholder='[{"consultant_no":"CON005","name":"张三",...}]'></textarea>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="doBatch()">导入</button></div>
+</div></div></div>
+
+<!-- 查领导 Modal -->
+<div class="modal fade" id="mgrModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title">👤 直属领导信息</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="mgrBody"></div>
+  <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">关闭</button></div>
+</div></div></div>
+
+<!-- 回收站 Modal -->
+<div class="modal fade" id="recycleModal" tabindex="-1"><div class="modal-dialog modal-xl"><div class="modal-content">
+  <div class="modal-header">
+    <h5 class="modal-title">🗑️ 回收站 — 已删除顾问（<span id="recycleTotal">0</span> 条）</h5>
+    <button class="btn-close" data-bs-dismiss="modal"></button>
+  </div>
+  <div class="modal-body p-0">
+    <div id="recycleLoading" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm me-2"></div>加载中…</div>
+    <table class="table table-hover table-sm mb-0 d-none" id="recycleTable">
+      <thead class="table-light">
+        <tr><th>编号</th><th>姓名</th><th>性别</th><th>电话</th><th>部门</th><th>职称</th><th>区域</th><th>删除时间</th><th>操作</th></tr>
+      </thead>
+      <tbody id="recycleBody"></tbody>
+    </table>
+    <p class="text-center text-muted py-4 d-none" id="recycleEmpty">回收站为空</p>
+  </div>
+  <div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">关闭</button></div>
+</div></div></div>
+
+{% endblock %}
+{% block scripts %}
+<script type="application/json" id="rowData">
+[{% for r in rows %}{% if not loop.first %},{% endif %}
+{"consultant_id":{{ r.consultant_id|tojson }},"consultant_no":{{ r.consultant_no|tojson }},"name":{{ r.name|tojson }},"gender":{{ r.gender|tojson }},"phone":{{ r.phone|tojson }},"email":{{ (r.email or '')|tojson }},"dept_no":{{ r.dept_no|tojson }},"title":{{ r.title|tojson }},"region":{{ (r.region or '')|tojson }}}{% endfor %}]
+</script>
+<script>
+// ── 原始数据（从数据岛读取，避免 Jinja2 语法在 JS 块内报红）──
+const ALL_ROWS = JSON.parse(document.getElementById('rowData').textContent);
+// 按 consultant_id 建索引，供 onclick 通过整数 id 安全查找，避免字符串注入
+const rowMap = new Map(ALL_ROWS.map(r => [r.consultant_id, r]));
+
+// HTML 转义，防止 XSS
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+// ── 分页状态 ──────────────────────────────────────
+let filteredRows = [...ALL_ROWS];
+let currentPage  = 1;
+
+function getPageSize() {
+  return parseInt(document.getElementById('pageSizeSelect').value) || 10;
+}
+
+function filterAndRender() {
+  const kw = document.getElementById('searchInput').value.trim().toLowerCase();
+  filteredRows = kw
+    ? ALL_ROWS.filter(r =>
+        (r.name || '').toLowerCase().includes(kw) ||
+        (r.consultant_no || '').toLowerCase().includes(kw) ||
+        (r.dept_no || '').toLowerCase().includes(kw) ||
+        (r.title || '').toLowerCase().includes(kw)
+      )
+    : [...ALL_ROWS];
+  document.getElementById('filtered-count').textContent = filteredRows.length;
+  document.getElementById('total-count').textContent = filteredRows.length;
+  goPage(1);
+}
+
+function goPage(page) {
+  const size  = getPageSize();
+  const total = Math.ceil(filteredRows.length / size) || 1;
+  currentPage = Math.max(1, Math.min(page, total));
+
+  const start = (currentPage - 1) * size;
+  const slice = filteredRows.slice(start, start + size);
+  renderRows(slice);
+  renderPagination(total);
+}
+
+function renderRows(rows) {
+  const tbody = document.getElementById('tableBody');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="text-center text-muted py-3">暂无数据</td></tr>';
+    return;
+  }
+  // onclick 只传安全的整数 id，数据通过 rowMap 查找，消除字符串注入和 XSS
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td><code>${escHtml(r.consultant_no)}</code></td>
+      <td><strong>${escHtml(r.name)}</strong></td>
+      <td>${escHtml(r.gender) || '-'}</td>
+      <td>${escHtml(r.phone) || '-'}</td>
+      <td>${escHtml(r.email) || '-'}</td>
+      <td>${escHtml(r.dept_no) || '-'}</td>
+      <td>${escHtml(r.title) || '-'}</td>
+      <td>${escHtml(r.region) || '-'}</td>
+      <td>
+        <button class="btn btn-sm btn-outline-secondary" onclick="showManager(${r.consultant_id})">查领导</button>
+        <button class="btn btn-sm btn-outline-primary" onclick="editRow(${r.consultant_id})"><i class="bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" onclick="delRow(${r.consultant_id})"><i class="bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+function renderPagination(total) {
+  const ul = document.getElementById('pagination');
+  if (total <= 1) { ul.innerHTML = ''; return; }
+
+  let html = `<li class="page-item ${currentPage===1?'disabled':''}">
+    <a class="page-link" href="#" onclick="goPage(${currentPage-1});return false">«</a></li>`;
+
+  const delta = 2;
+  let lo = Math.max(1, currentPage - delta);
+  let hi = Math.min(total, currentPage + delta);
+  if (lo > 1)     html += `<li class="page-item"><a class="page-link" href="#" onclick="goPage(1);return false">1</a></li>${lo>2?'<li class="page-item disabled"><span class="page-link">…</span></li>':''}`;
+  for (let p = lo; p <= hi; p++) {
+    html += `<li class="page-item ${p===currentPage?'active':''}"><a class="page-link" href="#" onclick="goPage(${p});return false">${p}</a></li>`;
+  }
+  if (hi < total) html += `${hi<total-1?'<li class="page-item disabled"><span class="page-link">…</span></li>':''}<li class="page-item"><a class="page-link" href="#" onclick="goPage(${total});return false">${total}</a></li>`;
+
+  html += `<li class="page-item ${currentPage===total?'disabled':''}">
+    <a class="page-link" href="#" onclick="goPage(${currentPage+1});return false">»</a></li>`;
+  ul.innerHTML = html;
+}
+
+// ── 新增 / 编辑 ────────────────────────────────────
+const myModal = new bootstrap.Modal('#myModal');
+
+// 部门列表缓存，只请求一次
+let _deptCache = null;
+async function loadDeptOptions(selectedNo = '') {
+  if (!_deptCache) {
+    const res = await fetch('/departments');
+    _deptCache = res.ok ? await res.json() : [];
+  }
+  const sel = document.getElementById('fDept');
+  sel.innerHTML = '<option value="">-- 请选择部门 --</option>' +
+    _deptCache.map(d => `<option value="${escHtml(d.dept_no)}">${escHtml(d.dept_name)}（${escHtml(d.dept_no)}）</option>`).join('');
+  sel.value = selectedNo;
+}
+
+function _setNoReadonly(readonly) {
+  const el   = document.getElementById('fNo');
+  const hint = document.getElementById('fNoHint');
+  el.readOnly = readonly;
+  el.classList.toggle('bg-light', readonly);
+  hint.classList.toggle('d-none', !readonly);
+}
+
+async function openCreate() {
+  document.getElementById('mTitle').textContent = '新增顾问';
+  document.getElementById('eId').value = '';
+  ['fNo','fName','fPhone','fEmail','fTitle','fRegion'].forEach(i => document.getElementById(i).value = '');
+  _setNoReadonly(false);
+  await loadDeptOptions('');
+  myModal.show();
+}
+// 只接收整数 id，数据从 rowMap 安全查取，不再通过 onclick 字符串传参
+async function editRow(id) {
+  const r = rowMap.get(id);
+  if (!r) return;
+  document.getElementById('mTitle').textContent = '编辑顾问';
+  document.getElementById('eId').value = id;
+  document.getElementById('fNo').value    = r.consultant_no;
+  document.getElementById('fName').value  = r.name;
+  document.getElementById('fGender').value = r.gender;
+  document.getElementById('fPhone').value = r.phone;
+  document.getElementById('fEmail').value = r.email;
+  document.getElementById('fTitle').value = r.title;
+  document.getElementById('fRegion').value = r.region;
+  _setNoReadonly(true);
+  await loadDeptOptions(r.dept_no);
+  myModal.show();
+}
+async function save() {
+  const id = document.getElementById('eId').value;  // 整数 id（编辑）或空字符串（新增）
+  const deptNo = document.getElementById('fDept').value;
+  if (!deptNo) { alert('请选择部门'); return; }
+  const body = {
+    consultant_no: document.getElementById('fNo').value,
+    name:    document.getElementById('fName').value,
+    gender:  document.getElementById('fGender').value,
+    phone:   document.getElementById('fPhone').value,
+    email:   document.getElementById('fEmail').value,
+    dept_no: deptNo,
+    title:   document.getElementById('fTitle').value,
+    region:  document.getElementById('fRegion').value,
+  };
+  const url = id ? '/consultant/' + id : '/consultant';
+  const res = await fetch(url, { method: id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (res.ok) { myModal.hide(); location.reload(); }
+  else { const e = await res.json(); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+}
+async function delRow(id) {
+  const r = rowMap.get(id);
+  const name = r ? r.name : '该顾问';
+  if (!confirm(`确认删除「${name}」？`)) return;
+  const res = await fetch('/consultant/' + id, { method: 'DELETE' });
+  if (res.ok) location.reload();
+  else alert('删除失败');
+}
+
+// ── 批量导入 ───────────────────────────────────────
+function openBatch() {
+  document.getElementById('batchText').value = '';
+  new bootstrap.Modal('#batchModal').show();
+}
+async function doBatch() {
+  const text = document.getElementById('batchText').value.trim();
+  if (!text) return alert('请输入 JSON 数据');
+  let data;
+  try { data = JSON.parse(text); if (!Array.isArray(data)) data = [data]; }
+  catch (e) { return alert('JSON 格式错误: ' + e.message); }
+  const res = await fetch('/consultant/batch-create', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(data) });
+  if (res.ok) { bootstrap.Modal.getInstance('#batchModal').hide(); location.reload(); }
+  else { const e = await res.json(); alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail)); }
+}
+
+// ── 查领导 ─────────────────────────────────────────
+async function showManager(id) {
+  const r = rowMap.get(id);
+  if (!r) return;
+  const res = await fetch('/consultant/' + r.consultant_no + '/manager');
+  const mgrModal = new bootstrap.Modal('#mgrModal');
+  if (res.ok) {
+    const d = await res.json();
+    document.getElementById('mgrBody').innerHTML = `
+      <table class="table table-sm mb-0">
+        <tr><th>顾问编号</th><td>${escHtml(d.consultant_no) || '-'}</td></tr>
+        <tr><th>顾问姓名</th><td>${escHtml(d.consultant_name) || escHtml(r.name)}</td></tr>
+        <tr><th>顾问职称</th><td>${escHtml(d.consultant_title) || '-'}</td></tr>
+        <tr><th>所属部门</th><td>${escHtml(d.dept_name) || '-'}</td></tr>
+        <tr><th>直属领导</th><td><strong>${escHtml(d.manager_name) || '（无上级）'}</strong></td></tr>
+      </table>`;
+  } else {
+    document.getElementById('mgrBody').innerHTML = '<p class="text-danger">查询失败</p>';
+  }
+  mgrModal.show();
+}
+
+// ── 回收站 ─────────────────────────────────────────
+let recycleRows = [];  // 缓存已删除列表，供 restoreRow 查名字
+
+async function openRecycleBin() {
+  const loading = document.getElementById('recycleLoading');
+  const table   = document.getElementById('recycleTable');
+  const empty   = document.getElementById('recycleEmpty');
+  loading.classList.remove('d-none');
+  table.classList.add('d-none');
+  empty.classList.add('d-none');
+  new bootstrap.Modal('#recycleModal').show();
+
+  const res = await fetch('/consultant/deleted');
+  loading.classList.add('d-none');
+  if (!res.ok) {
+    empty.textContent = '加载失败，请重试';
+    empty.classList.remove('d-none');
+    return;
+  }
+  recycleRows = await res.json();
+  document.getElementById('recycleTotal').textContent = recycleRows.length;
+
+  if (!recycleRows.length) {
+    empty.classList.remove('d-none');
+    return;
+  }
+
+  document.getElementById('recycleBody').innerHTML = recycleRows.map(r => `
+    <tr>
+      <td><code>${escHtml(r.consultant_no)}</code></td>
+      <td>${escHtml(r.name)}</td>
+      <td>${escHtml(r.gender) || '-'}</td>
+      <td>${escHtml(r.phone) || '-'}</td>
+      <td>${escHtml(r.dept_no) || '-'}</td>
+      <td>${escHtml(r.title) || '-'}</td>
+      <td>${escHtml(r.region) || '-'}</td>
+      <td><small class="text-muted">${r.update_time ? r.update_time.replace('T',' ').slice(0,19) : '-'}</small></td>
+      <td><button class="btn btn-sm btn-outline-success" onclick="restoreRow(${r.consultant_id})"><i class="bi-arrow-counterclockwise"></i> 恢复</button></td>
+    </tr>`).join('');
+  table.classList.remove('d-none');
+
+  // 同步更新工具栏徽标
+  updateRecycleBadge(recycleRows.length);
+}
+
+async function restoreRow(id) {
+  const r = recycleRows.find(x => x.consultant_id === id);
+  const name = r ? r.name : '该顾问';
+  if (!confirm(`确认恢复「${name}」？恢复后将重新出现在顾问列表中。`)) return;
+  const res = await fetch('/consultant/' + id + '/restore', { method: 'PATCH' });
+  if (res.ok) {
+    bootstrap.Modal.getInstance('#recycleModal').hide();
+    location.reload();
+  } else {
+    const e = await res.json();
+    alert(typeof e.detail === 'string' ? e.detail : JSON.stringify(e.detail));
+  }
+}
+
+function updateRecycleBadge(count) {
+  const badge = document.getElementById('recycleBadge');
+  if (count > 0) {
+    badge.textContent = count > 99 ? '99+' : count;
+    badge.classList.remove('d-none');
+  } else {
+    badge.classList.add('d-none');
+  }
+}
+
+// ── 初始化 ─────────────────────────────────────────
+goPage(1);
+
+// 页面加载时静默拉取回收站数量，更新徽标
+(async () => {
+  try {
+    const res = await fetch('/consultant/deleted');
+    if (res.ok) {
+      const data = await res.json();
+      updateRecycleBadge(data.length);
+    }
+  } catch (_) {}
+})();
+</script>
+{% endblock %}

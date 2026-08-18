@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}心理风险预警{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">心理风险预警</h3><div class="text-muted">仅显示分配给你的风险提醒和最小必要摘要；请按学校心理危机干预流程及时处置。</div></div><button id="refreshAlerts" class="btn btn-outline-primary">刷新</button></div>
+<div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>学生学号</th><th>风险等级</th><th>最小必要摘要</th><th>状态</th><th>创建时间</th><th>处置</th></tr></thead><tbody id="alertRows"><tr><td colspan="6" class="text-center text-muted py-4">正在加载…</td></tr></tbody></table></div></div></div>
+<div id="riskNotice" class="alert d-none mt-3"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const alertRows=document.getElementById('alertRows');const riskNotice=document.getElementById('riskNotice');
+function showRiskNotice(message,type='info'){riskNotice.className=`alert alert-${type} mt-3`;riskNotice.textContent=message;}
+async function riskRequest(url,options={}){const response=await fetch(url,options);const data=await response.json();if(!response.ok)throw new Error(data.detail||'操作失败');return data;}
+async function recordDisposition(alertId){const disposition=window.prompt('记录处置情况（必填）');if(!disposition)return;const close=window.confirm('选择“确定”关闭预警；选择“取消”标记为已查看并持续跟进。');try{await riskRequest(`/api/risk-alerts/${alertId}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:close?'closed':'reviewed',disposition})});showRiskNotice('处置记录已保存。','success');loadAlerts();}catch(error){showRiskNotice(error.message,'danger');}}
+async function loadAlerts(){try{const data=await riskRequest('/api/risk-alerts?page_size=100');alertRows.innerHTML='';data.items.forEach(item=>{const row=document.createElement('tr');[item.student_no,item.risk_level,item.trigger_summary,item.status,item.created_at||''].forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);});const action=document.createElement('td');const button=document.createElement('button');button.className='btn btn-sm btn-outline-primary';button.textContent='记录处置';button.onclick=()=>recordDisposition(item.id);action.append(button);row.append(action);alertRows.append(row);});if(!alertRows.children.length)alertRows.innerHTML='<tr><td colspan="6" class="text-center text-muted py-4">暂无待处理风险预警</td></tr>';}catch(error){showRiskNotice(error.message,'danger');}}
+document.getElementById('refreshAlerts').addEventListener('click',loadAlerts);loadAlerts();
+</script>
+{% endblock %}

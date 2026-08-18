@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}成绩单{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">成绩单</h3><div class="text-muted">按学期查看课程性质、学分、成绩和绩点。</div></div><a class="btn btn-outline-primary" href="/pages/university-dashboard">返回工作台</a></div>
+<div class="row g-3 mb-3"><div class="col-lg-4"><div class="card h-100"><div class="card-header">学业汇总</div><div class="card-body"><div class="display-6" id="gpa">--</div><div class="text-muted">累计 GPA</div><hr><div id="creditTotal">计入绩点学分：--</div><div id="attemptedCredits" class="text-muted mt-1">全部课程学分：--</div></div></div></div><div class="col-lg-8"><div class="card h-100"><div class="card-header">绩点计算说明</div><div class="card-body"><p id="gpaRule" class="mb-0">正在读取绩点规则…</p></div></div></div></div>
+<div id="termRows"><div class="card"><div class="card-body text-center text-muted py-4">正在加载成绩…</div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+fetch('/api/university/me/transcript').then(r=>r.json()).then(data=>{
+    document.getElementById('gpa').textContent=data.gpa??'--';
+    document.getElementById('creditTotal').textContent='计入绩点学分：'+(data.items||[]).filter(item=>item.grade_point!=null).reduce((sum,item)=>sum+Number(item.credits||0),0).toFixed(1);
+    document.getElementById('attemptedCredits').textContent='全部课程学分：'+(data.total_credits??0);
+    if(data.gpa_rule){document.getElementById('gpaRule').textContent=data.gpa_rule.note;}
+    const root=document.getElementById('termRows');root.innerHTML='';
+    (data.terms||[]).forEach(term=>{
+        const card=document.createElement('details');card.className='card mb-3';card.open=true;
+        const head=document.createElement('summary');head.className='card-header d-flex justify-content-between align-items-center';
+        const title=document.createElement('strong');title.textContent=term.term_alias ? `${term.term_name}（${term.term_alias}）` : term.term_name;
+        const summary=document.createElement('span');summary.className='text-muted';summary.textContent=`学分 ${term.total_credits} · 学期 GPA ${term.gpa??'--'}`;head.append(title,summary);
+        const wrap=document.createElement('div');wrap.className='table-responsive';
+        const table=document.createElement('table');table.className='table table-hover mb-0';table.innerHTML='<thead><tr><th>课程代码</th><th>课程名称</th><th>性质</th><th>学分</th><th>成绩</th><th>绩点</th></tr></thead><tbody></tbody>';
+        const body=table.querySelector('tbody');(term.items||[]).forEach(item=>{const row=document.createElement('tr');[item.course_code,item.course_name,item.course_type,item.credits,item.grade_display,item.grade_point??'—'].forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);});body.append(row);});
+        wrap.append(table);card.append(head,wrap);root.append(card);
+    });
+    if(!root.children.length)root.innerHTML='<div class="card"><div class="card-body text-center text-muted py-4">暂无已审核成绩</div></div>';
+}).catch(()=>{document.getElementById('termRows').innerHTML='<div class="alert alert-danger">成绩读取失败，请稍后重试。</div>';});
+</script>
+{% endblock %}

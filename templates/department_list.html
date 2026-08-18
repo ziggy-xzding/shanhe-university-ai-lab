@@ -1,0 +1,57 @@
+{% extends "base.html" %}{% block title %}部门管理{% endblock %}{% block content %}
+<div class="card"><div class="card-header d-flex justify-content-between"><span>🏢 部门列表（{{ rows|length }} 个）</span><div><button class="btn btn-success btn-sm" onclick="openCreate()"><i class="bi-plus"></i> 新增</button> <button class="btn btn-outline-info btn-sm" onclick="openBatch()"><i class="bi-upload"></i> 批量导入</button></div></div>
+<div class="card-body p-0"><table class="table table-hover mb-0">
+<thead><tr><th>编号</th><th>部门名</th><th>负责人</th><th>位置</th><th>电话</th><th>操作</th></tr></thead>
+<tbody>{% for r in rows %}<tr>
+<td><code>{{ r.dept_no }}</code></td><td><strong>{{ r.dept_name }}</strong></td><td>{{ r.dept_manager or '-' }}</td>
+<td>{{ r.dept_location or '-' }}</td><td>{{ r.dept_phone or '-' }}</td>
+<td>
+<button class="btn btn-sm btn-outline-primary" onclick="editRow('{{ r.dept_no }}','{{ r.dept_name }}','{{ r.dept_manager or '' }}','{{ r.dept_location or '' }}','{{ r.dept_phone or '' }}')"><i class="bi-pencil"></i></button>
+<button class="btn btn-sm btn-outline-danger" onclick="delRow('{{ r.dept_no }}')"><i class="bi-trash"></i></button>
+</td></tr>{% endfor %}</tbody></table></div></div>
+
+<div class="modal fade" id="myModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title" id="mTitle">新增部门</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body"><input type="hidden" id="eNo">
+<div class="mb-2"><label class="form-label small">部门编号</label><input id="fNo" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">部门名称</label><input id="fName" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">负责人</label><input id="fMgr" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">位置</label><input id="fLoc" class="form-control form-control-sm"></div>
+<div class="mb-2"><label class="form-label small">电话</label><input id="fPhone" class="form-control form-control-sm"></div>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="save()">保存</button></div>
+</div></div></div>
+{% endblock %}{% block scripts %}
+<script>
+const modal=new bootstrap.Modal('#myModal');
+function openCreate(){ document.getElementById('mTitle').textContent='新增部门';document.getElementById('eNo').value='';['fNo','fName','fMgr','fLoc','fPhone'].forEach(i=>document.getElementById(i).value='');modal.show(); }
+function editRow(no,name,mgr,loc,phone){ document.getElementById('mTitle').textContent='编辑部门';document.getElementById('eNo').value=no;document.getElementById('fNo').value=no;document.getElementById('fName').value=name;document.getElementById('fMgr').value=mgr;document.getElementById('fLoc').value=loc;document.getElementById('fPhone').value=phone;modal.show(); }
+async function save(){
+var no=document.getElementById('eNo').value;
+var body={dept_no:document.getElementById('fNo').value,dept_name:document.getElementById('fName').value,dept_manager:document.getElementById('fMgr').value,dept_location:document.getElementById('fLoc').value,dept_phone:document.getElementById('fPhone').value};
+var url=no?'/departments/'+no:'/departments';
+var res=await fetch(url,{method:no?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+if(res.ok){modal.hide();location.reload();}else{var e=await res.json();alert(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail));}
+}
+async function delRow(no){ if(!confirm('确认删除?'))return;var res=await fetch('/departments/'+no,{method:'DELETE'});if(res.ok)location.reload();else alert('删除失败'); }
+// 批量导入
+function openBatch(){ document.getElementById('batchText').value='';new bootstrap.Modal('#batchModal').show(); }
+async function doBatch(){
+var text=document.getElementById('batchText').value.trim();if(!text)return alert('请输入JSON数据');
+try{ var data=JSON.parse(text);if(!Array.isArray(data))data=[data]; }
+catch(e){ return alert('JSON格式错误: '+e.message); }
+var res=await fetch('/departments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+if(res.ok){ bootstrap.Modal.getInstance('#batchModal').hide();location.reload(); }
+else{ var e=await res.json();alert(typeof e.detail==='string'?e.detail:JSON.stringify(e.detail)); }
+}
+</script>
+
+<div class="modal fade" id="batchModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+<div class="modal-header"><h5 class="modal-title">📦 批量导入部门</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal-body">
+<small class="text-muted">粘贴JSON数组，格式：<code>[{"dept_no":"DEPT004","dept_name":"研发部","dept_manager":"王经理","dept_location":"C栋","dept_phone":"010-1004"},...]</code></small>
+<textarea id="batchText" class="form-control form-control-sm mt-2" rows="6" placeholder='[{"dept_no":"DEPT004","dept_name":"研发部",...}]'></textarea>
+</div>
+<div class="modal-footer"><button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">取消</button><button class="btn btn-primary btn-sm" onclick="doBatch()">导入</button></div>
+</div></div></div>
+{% endblock %}

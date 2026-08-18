@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}寝室选择{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">寝室选择</h3><div class="text-muted">新生可从仍有空床的房间中选择寝室和床位。</div></div><a class="btn btn-outline-primary" href="/pages/university-dashboard">返回学生模块</a></div>
+<div id="dormNotice" class="alert d-none"></div>
+<div class="row g-3"><div class="col-lg-7"><div class="card"><div class="card-header">可选寝室</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>楼栋</th><th>房间</th><th>类型</th><th>剩余床位</th><th></th></tr></thead><tbody id="dormRows"><tr><td colspan="5" class="text-center text-muted py-4">正在加载…</td></tr></tbody></table></div></div></div></div><div class="col-lg-5"><div class="card"><div class="card-header">我的寝室选择</div><div class="card-body" id="myDorm">正在读取…</div></div><div class="card mt-3"><div class="card-header">选择床位</div><div class="card-body"><form id="dormForm" class="vstack gap-2"><input type="hidden" id="roomId"><label class="form-label mb-0" for="bedNo">床位号</label><select class="form-select" id="bedNo" required><option value="1号床">1号床</option><option value="2号床">2号床</option><option value="3号床">3号床</option><option value="4号床">4号床</option></select><button class="btn btn-primary" type="submit">确认选择</button></form></div></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const dormRows=document.getElementById('dormRows'), dormNotice=document.getElementById('dormNotice'), roomId=document.getElementById('roomId');
+function note(message,type='info'){dormNotice.className=`alert alert-${type}`;dormNotice.textContent=message;}
+async function loadDorm(){
+  const [roomsResponse,myResponse]=await Promise.all([fetch('/api/student-affairs/dorm-rooms'),fetch('/api/student-affairs/me/dorm')]);
+  const rooms=await roomsResponse.json(); const mine=myResponse.ok?await myResponse.json():null;
+  document.getElementById('myDorm').textContent=mine?`${mine.building} ${mine.room_no}室 · ${mine.bed_no||'床位待确认'}`:'暂未选择寝室';
+  dormRows.innerHTML=''; (rooms.items||[]).forEach(room=>{const row=document.createElement('tr'); [room.building,room.room_no,room.room_type,`${room.remaining_beds}/${room.capacity}`].forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);}); const cell=document.createElement('td'); const button=document.createElement('button');button.className='btn btn-sm btn-outline-primary';button.textContent='选择';button.onclick=()=>{roomId.value=room.id;note(`已选择${room.building} ${room.room_no}室，请确认床位。`,'info');};cell.append(button);row.append(cell);dormRows.append(row);}); if(!dormRows.children.length)dormRows.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">暂无可选寝室</td></tr>';
+}
+document.getElementById('dormForm').addEventListener('submit',async event=>{event.preventDefault();if(!roomId.value)return note('请先选择一个寝室。','warning');const response=await fetch('/api/student-affairs/me/dorm-selection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room_id:Number(roomId.value),bed_no:document.getElementById('bedNo').value})});const data=await response.json();if(!response.ok)return note(data.detail||'寝室选择失败','danger');note(data.message,'success');loadDorm();});
+loadDorm().catch(error=>note(error.message,'danger'));
+</script>
+{% endblock %}

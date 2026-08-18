@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}成绩录入{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">成绩录入</h3><div class="text-muted">仅可操作本人任教教学班。已通过教务审核的成绩将锁定，不能再修改。</div></div><a class="btn btn-outline-primary" href="/pages/university-dashboard">返回工作台</a></div>
+<div class="card"><div class="card-body"><label class="form-label" for="sectionSelect">选择教学班</label><select class="form-select" id="sectionSelect"><option value="">请选择教学班</option></select></div></div>
+<div class="card mt-3"><div class="card-header">选课学生与成绩</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>学号</th><th>姓名</th><th>当前成绩</th><th>状态</th><th>录入成绩</th></tr></thead><tbody id="rosterRows"><tr><td colspan="5" class="text-center text-muted py-4">请选择教学班</td></tr></tbody></table></div></div></div>
+<div id="gradeNotice" class="alert d-none mt-3"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const sectionSelect=document.getElementById('sectionSelect');const rosterRows=document.getElementById('rosterRows');const gradeNotice=document.getElementById('gradeNotice');
+function showGradeNotice(message,type='info'){gradeNotice.className=`alert alert-${type} mt-3`;gradeNotice.textContent=message;}
+async function gradeRequest(url,options={}){const response=await fetch(url,options);const data=await response.json();if(!response.ok)throw new Error(data.detail||'操作失败');return data;}
+async function loadSections(){try{const data=await gradeRequest('/api/university/me/teaching-sections');data.items.forEach(section=>{const option=document.createElement('option');option.value=section.section_id;option.textContent=`${section.term_name} · ${section.course_code} ${section.course_name}`;sectionSelect.append(option);});if(!data.items.length)showGradeNotice('当前没有分配给你的教学班。','info');}catch(error){showGradeNotice(error.message,'danger');}}
+async function saveGrade(sectionId,studentNo,score){try{await gradeRequest(`/api/university/sections/${sectionId}/grades`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({student_no:studentNo,score:Number(score)})});showGradeNotice('成绩已提交，等待教务审核。','success');loadRoster();}catch(error){showGradeNotice(error.message,'danger');}}
+async function loadRoster(){const sectionId=sectionSelect.value;if(!sectionId){rosterRows.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">请选择教学班</td></tr>';return;}try{const data=await gradeRequest(`/api/university/sections/${sectionId}/roster`);rosterRows.innerHTML='';data.items.forEach(item=>{const row=document.createElement('tr');[item.student_no,item.name,item.score??'-',item.grade_status??'未录入'].forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);});const action=document.createElement('td');const input=document.createElement('input');input.className='form-control form-control-sm d-inline-block';input.type='number';input.min='0';input.max='100';input.value=item.score??'';input.style.width='90px';const button=document.createElement('button');button.className='btn btn-sm btn-primary ms-2';button.textContent='提交';button.disabled=item.grade_status==='approved';button.onclick=()=>{if(input.value==='')return showGradeNotice('请填写 0 到 100 的成绩。','warning');saveGrade(sectionId,item.student_no,input.value);};action.append(input,button);row.append(action);rosterRows.append(row);});if(!rosterRows.children.length)rosterRows.innerHTML='<tr><td colspan="5" class="text-center text-muted py-4">该教学班暂无已选学生</td></tr>';}catch(error){showGradeNotice(error.message,'danger');}}
+sectionSelect.addEventListener('change',loadRoster);loadSections();
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}学生发展 · 山河大学{% endblock %}
+{% block breadcrumb %}学生发展{% endblock %}
+{% block content %}
+<section class="sh-dashboard-heading">
+    <div><div class="sh-eyebrow"><span></span> STUDENT DEVELOPMENT</div><h1>学生发展</h1><p>集中查看学业待办、学校推送和适合当前阶段的学习与发展建议。</p></div>
+    <a class="btn btn-outline-primary" href="/pages/course-selection"><i class="bi bi-calendar2-check me-2"></i>选课中心</a>
+</section>
+<section id="growthNotice" class="sh-alert-panel d-none" role="alert"></section>
+<section class="sh-student-metrics">
+    <article class="sh-student-metric"><div class="sh-student-metric-icon teal"><i class="bi bi-bar-chart-line"></i></div><span>阶段综合均分</span><strong id="averageScore">--</strong><small id="scoreHint">正在读取成绩…</small></article>
+    <article class="sh-student-metric"><div class="sh-student-metric-icon gold"><i class="bi bi-trophy"></i></div><span>班级中的位置</span><strong id="classRank">--</strong><small id="classSize">/ -- 名</small></article>
+    <article class="sh-student-metric sh-student-insight"><div class="sh-student-metric-icon coral"><i class="bi bi-lightbulb"></i></div><span>当前学生阶段</span><strong id="insightTitle">正在识别</strong><small>学习建议会保留，并结合你的阶段推荐新的学习主题。</small><button id="reportButton" type="button">生成学习建议 <i class="bi bi-arrow-up-right"></i></button></article>
+</section>
+<section class="sh-student-grid">
+    <article class="sh-panel sh-trend-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">ACTION CENTER</span><h3 id="trendTitle">待办事项</h3></div><span id="attentionBadge" class="sh-attention-badge">正在读取</span></div><div id="todoRows" class="sh-service-list"><div class="sh-loading-line">正在读取待办…</div></div></article>
+    <article class="sh-panel sh-report-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">PERSONAL REPORT</span><h3>学习建议</h3></div><i class="bi bi-feather"></i></div><p id="reportText">这里会根据你的成绩生成补充建议，不替代正式的成绩管理数据。</p><div class="sh-report-rule"></div><span class="sh-report-footnote"><i class="bi bi-shield-check"></i> 建议仅供个人复盘</span></article>
+</section>
+<section class="sh-student-grid">
+    <article class="sh-panel sh-plan-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">CAMPUS UPDATE</span><h3>学校推送</h3></div><i class="bi bi-megaphone"></i></div><div id="announcementRows" class="sh-service-list"><div class="sh-loading-line">正在读取学校推送…</div></div></article>
+    <article class="sh-panel sh-plan-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">FOR YOU</span><h3>为你推荐</h3></div><i class="bi bi-compass"></i></div><div id="recommendationRows" class="sh-service-list"><div class="sh-loading-line">正在生成推荐…</div></div></article>
+</section>
+<section class="sh-panel sh-plan-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">THIS WEEK</span><h3>本周可执行目标</h3></div><i class="bi bi-check2-square"></i></div><div class="sh-plan-list"><div><span>01</span><p><strong>整理最近一次错题中的 3 个知识点</strong><small>把模糊的地方变成下一次进步的起点</small></p></div><div><span>02</span><p><strong>每天留出 20 分钟进行阶段复盘</strong><small>持续比突击更容易形成稳定节奏</small></p></div><div><span>03</span><p><strong>下一次考核前完成一次小测</strong><small>用反馈确认自己的准备程度</small></p></div></div></section>
+<button id="teacherLauncher" class="sh-agent-launcher" type="button" aria-label="打开学习教练"><i class="bi bi-stars"></i><span>学习教练</span></button>
+<aside id="agentDrawer" class="sh-agent-drawer" aria-label="学习教练对话">
+    <header><div><span class="sh-panel-kicker">LEARNING COACH</span><strong>学习教练</strong><small>根据你的成长数据整理学习建议</small></div><button id="closeDrawer" class="sh-icon-button" type="button" aria-label="关闭学习教练"><i class="bi bi-x-lg"></i></button></header>
+    <div id="chatMessages" class="sh-chat-messages"><div class="sh-chat-bubble teacher">可以问我成绩复盘、课程安排或校园事务。先看数据，再给建议。</div></div>
+    <form id="chatForm" class="sh-chat-form"><textarea id="chatInput" maxlength="1000" placeholder="输入你想了解的问题" required></textarea><button type="submit" aria-label="发送消息"><i class="bi bi-send"></i></button></form>
+</aside>
+{% endblock %}
+{% block scripts %}<script src="/js/student_agent.js?v=20260731"></script>{% endblock %}

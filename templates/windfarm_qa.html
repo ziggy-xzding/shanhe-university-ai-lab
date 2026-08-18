@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% block title %}风电知识库 — 沃林学生管理系统{% endblock %}
+{% block content %}
+
+<link rel="stylesheet" href="/css/qa.css">
+
+<div class="qa-page">
+    <!-- 头部 -->
+    <div class="qa-header">
+        <h5><i class="bi-journal-text me-2"></i>风电工程 · 知识问答</h5>
+        <span id="statusBadge" class="qa-status-badge qa-status-empty">
+            <i class="bi-hourglass-split me-1"></i>检查中...
+        </span>
+    </div>
+
+    <!-- 消息区域 -->
+    <div class="qa-messages" id="qaMessages">
+        <div class="qa-empty" id="qaEmpty">
+            <div class="qa-empty-icon">🌊</div>
+            <div class="qa-empty-title">风电工程文档知识库</div>
+            <div class="qa-empty-sub" id="qaEmptyText">
+                知识库尚未初始化，请先上传风电工程 PDF 文档建立知识库。
+            </div>
+            <!-- 上传区域 -->
+            <div style="margin-top: 20px; width: 100%; max-width: 450px;">
+                <input type="file" id="pdfUpload" accept=".pdf" style="display:none"
+                       onchange="handleUpload(event)">
+                <button class="btn btn-outline-primary w-100" onclick="document.getElementById('pdfUpload').click()">
+                    <i class="bi-cloud-upload me-2"></i>上传风电工程 PDF 文档
+                </button>
+                <div class="qa-upload-progress mt-2" id="uploadProgress">
+                    <div class="progress" style="height:6px">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated"
+                             style="width:100%"></div>
+                    </div>
+                    <small class="text-muted">正在分块并向量化入库...</small>
+                </div>
+            </div>
+            <div class="qa-suggestions" id="qaSuggestions" style="display:none">
+                <span class="qa-suggestion-chip" data-q="本工程项目名称是什么？">工程名称？</span>
+                <span class="qa-suggestion-chip" data-q="本项目风机的单机容量有哪些？">风机容量？</span>
+                <span class="qa-suggestion-chip" data-q="本项目的总装机容量是多少？">总装机？</span>
+                <span class="qa-suggestion-chip" data-q="本项目海域的常浪向是什么？">常浪向？</span>
+                <span class="qa-suggestion-chip" data-q="本工程66kV配电装置的接线方式是什么？">66kV接线？</span>
+                <span class="qa-suggestion-chip" data-q="2019年5月90m高度处的风速是多少？">风速查询</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 输入区域 -->
+    <div class="qa-input-area">
+        <div class="qa-input-row">
+            <textarea id="qaInput" rows="1"
+                      placeholder="输入你的问题..."
+                      onkeydown="handleKey(event)"></textarea>
+            <button class="qa-send-btn" id="qaSendBtn" onclick="sendMessage()"
+                    title="发送">
+                <i class="bi-send"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+let isSending = false;
+let kbReady = false;
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadStatus();
+    // 建议问题点击
+    document.querySelectorAll('.qa-suggestion-chip').forEach(chip => {
+        chip.addEventListener('click', function() {
+            document.getElementById('qaInput').value = this.dataset.q;
+            sendMessage();
+        });
+    });
+    document.getElementById('qaInput').focus();
+});
+
+// ── 上传 PDF ──────────────────────────────────────
+async function handleUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    document.getElementById('uploadProgress').classList.add('show');
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const res = await fetch('/windfarm/ingest', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        document.getElementById('uploadProgress').classList.remove('show');
+        if (data.success) {
+            renderSystemMessage(`文档「${data.filename}」入库成功！共 ${data.inserted} 条知识片段。`);
+        } else {
+            renderSystemMessage('入库失败，请重试。');
+        }
+        loadStatus();
+    } catch (err) {
+        document.getElementById('uploadProgress').classList.remove('show');
+        renderSystemMessage('上传失败: ' + err.message);
+    }
+    e.target.value = '';
+}
+
+// ── 发送消息 ───────────────────────────────────────
+async function sendMessage() {
+    if (isSending) return;
+    const input = document.getElementById('qaInput');
+    const question = input.value.trim();
+    if (!question) return;
+
+    isSending = true;
+    hideEmpty();
+    renderUserMessage(question);
+    input.value = '';
+    autoResize(input);
+    showLoading();
+
+    try {
+        const res = await fetch('/windfarm/ask', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question: question, top_k: 5})
+        });
+        const data = await res.json();
+        removeLoading();
+        renderAiMessage(data.question, data.answer, data.sources || []);
+    } catch (err) {
+        removeLoading();
+        renderSystemMessage('请求失败: ' + err.message);
+    }
+    isSending = false;
+    scrollBottom();
+}
+
+// ── 加载知识库状态 ─────────────────────────────────
+async function loadStatus() {
+    try {
+        const res = await fetch('/windfarm/status');
+        const data = await res.json();
+        const badge = document.getElementById('statusBadge');
+        const suggest = document.getElementById('qaSuggestions');
+        const emptyText = document.getElementById('qaEmptyText');
+        if (data.ready) {
+            kbReady = true;
+            badge.className = 'qa-status-badge qa-status-ready';
+            badge.innerHTML = '<i class="bi-check-circle me-1"></i>知识库就绪 (' + data.total_chunks + ' 条)';
+            if (suggest) suggest.style.display = 'flex';
+            if (emptyText) emptyText.textContent = '你可以向我提问关于风电工程的任何问题，我会从文档中查找相关内容。';
+        } else {
+            kbReady = false;
+            badge.className = 'qa-status-badge qa-status-empty';
+            badge.innerHTML = '<i class="bi-exclamation-triangle me-1"></i>请先上传文档';
+            if (suggest) suggest.style.display = 'none';
+        }
+    } catch (err) {
+        document.getElementById('statusBadge').innerHTML = '<i class="bi-x-circle me-1"></i>状态获取失败';
+    }
+}
+
+// ── 渲染（与三国页面相同逻辑） ──────────────────────
+function hideEmpty() {
+    const el = document.getElementById('qaEmpty');
+    if (el) el.style.display = 'none';
+}
+
+function renderUserMessage(text) {
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend',
+        `<div class="qa-message qa-message-user"><div class="qa-bubble">${escapeHtml(text)}</div></div>`);
+    scrollBottom();
+}
+
+function renderAiMessage(question, answer, sources) {
+    const srcHtml = sources.length > 0 ? renderSources(sources) : '';
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend',
+        `<div class="qa-message qa-message-ai"><div class="qa-bubble">${simpleMarkdown(answer)}</div>${srcHtml}</div>`);
+    scrollBottom();
+}
+
+function renderSystemMessage(text) {
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend',
+        `<div class="qa-message qa-message-system"><div class="qa-bubble">${escapeHtml(text)}</div></div>`);
+    scrollBottom();
+}
+
+function renderSources(sources) {
+    let items = sources.map(s => {
+        let meta = '';
+        if (s.page) meta += `<span>第${s.page}页</span>`;
+        if (s.source) meta += `<span>${escapeHtml(s.source)}</span>`;
+        if (s.score !== undefined) meta += `<span>相似度 ${(s.score*100).toFixed(0)}%</span>`;
+        return `<div class="qa-source-item"><div class="qa-source-meta">${meta}</div><div>${escapeHtml(s.text).substring(0, 200)}...</div></div>`;
+    }).join('');
+    return `<div class="qa-sources"><span class="qa-sources-toggle" onclick="toggleSources(this)"><i class="bi-chevron-down"></i> 查看来源 (${sources.length} 条)</span><div class="qa-sources-panel">${items}</div></div>`;
+}
+
+function toggleSources(el) {
+    const panel = el.nextElementSibling;
+    const icon = el.querySelector('i');
+    panel.classList.toggle('show');
+    icon.className = panel.classList.contains('show') ? 'bi-chevron-up' : 'bi-chevron-down';
+}
+
+function showLoading() {
+    document.getElementById('qaMessages').insertAdjacentHTML('beforeend',
+        '<div class="qa-loading" id="qaLoading"><span></span><span></span><span></span></div>');
+    scrollBottom();
+}
+
+function removeLoading() { const el = document.getElementById('qaLoading'); if (el) el.remove(); }
+function scrollBottom() {
+    const el = document.getElementById('qaMessages');
+    setTimeout(() => { el.scrollTop = el.scrollHeight; }, 50);
+}
+function autoResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    autoResize(e.target);
+}
+function escapeHtml(str) { const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
+function simpleMarkdown(t) {
+    t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    t = t.replace(/\n/g, '<br>');
+    t = t.replace(/---/g, '<hr style="margin:6px 0;border-color:#e5e7eb">');
+    return t;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}学生事务{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">学生事务</h3><div class="text-muted">请假、资助、奖惩、宿舍、公告和毕业去向。</div></div><a class="btn btn-outline-primary" href="/pages/university-dashboard">返回工作台</a></div>
+{% if principal.role == 'student' %}
+<div class="row g-3"><div class="col-lg-6"><div class="card"><div class="card-header">提交请假申请</div><div class="card-body"><form id="leaveForm" class="vstack gap-2"><input class="form-control" type="date" name="starts_on" required><input class="form-control" type="date" name="ends_on" required><textarea class="form-control" name="reason" placeholder="请假原因" required></textarea><button class="btn btn-primary">提交</button></form></div></div></div><div class="col-lg-6"><div class="card"><div class="card-header">提交资助申请</div><div class="card-body"><form id="aidForm" class="vstack gap-2"><input class="form-control" name="aid_type" placeholder="资助类型，如助学金" required><textarea class="form-control" name="reason" placeholder="申请原因" required></textarea><button class="btn btn-primary">提交</button></form></div></div></div><div class="col-lg-6"><div class="card"><div class="card-header">我的寝室</div><div class="card-body"><div id="dormInfo" class="mb-3">正在加载…</div><div id="dormSelection" class="border-top pt-3"><div class="fw-semibold mb-2">选择寝室</div><div class="text-muted small mb-2">请选择房间和床位，确认后会显示在你的寝室信息中。</div><form id="dormSelectionForm" class="row g-2 align-items-end"><div class="col-md-6"><label class="form-label" for="dormRoom">房间</label><select class="form-select" id="dormRoom" required><option value="">正在加载…</option></select></div><div class="col-md-4"><label class="form-label" for="dormBed">床位</label><select class="form-select" id="dormBed" required><option value="1">1 床</option><option value="2">2 床</option><option value="3">3 床</option><option value="4">4 床</option></select></div><div class="col-md-2"><button class="btn btn-primary w-100" type="submit">确认</button></div></form><div id="dormSelectionNotice" class="small mt-2"></div></div></div></div><div class="col-lg-6"><div class="card"><div class="card-header">最新公告</div><div class="card-body" id="announcements">正在加载…</div></div></div></div>
+{% elif principal.role in ['admin', 'student_affairs'] %}
+<div class="row g-3">
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header">待审批请假</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>学号</th><th>日期</th><th>事由</th><th>操作</th></tr></thead><tbody id="pendingLeaves"><tr><td colspan="4" class="text-center text-muted py-3">正在加载…</td></tr></tbody></table></div></div></div></div>
+  <div class="col-xl-6"><div class="card h-100"><div class="card-header">待审批资助</div><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>学号</th><th>类型</th><th>事由</th><th>操作</th></tr></thead><tbody id="pendingAid"><tr><td colspan="4" class="text-center text-muted py-3">正在加载…</td></tr></tbody></table></div></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">发布公告</div><div class="card-body"><form id="announcementForm" class="vstack gap-2"><input class="form-control" name="title" placeholder="公告标题" required><textarea class="form-control" name="content" placeholder="公告内容" required></textarea><select class="form-select" name="audience"><option value="all">全校</option><option value="student">学生</option><option value="staff">教职工</option></select><button class="btn btn-primary">发布公告</button></form></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">宿舍分配</div><div class="card-body"><form id="dormForm" class="vstack gap-2"><input class="form-control" name="student_no" placeholder="学生学号" required><input class="form-control" name="building" placeholder="楼栋" required><input class="form-control" name="room_no" placeholder="房间号" required><input class="form-control" name="bed_no" placeholder="床位号"><button class="btn btn-primary">保存宿舍</button></form></div></div></div>
+  <div class="col-lg-4"><div class="card h-100"><div class="card-header">奖惩登记</div><div class="card-body"><form id="rewardForm" class="vstack gap-2"><input class="form-control" name="student_no" placeholder="学生学号" required><select class="form-select" name="record_type"><option value="reward">奖励</option><option value="punishment">处分</option></select><input class="form-control" name="title" placeholder="事项标题" required><textarea class="form-control" name="detail" placeholder="说明"></textarea><button class="btn btn-primary">保存记录</button></form></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">毕业去向维护</div><div class="card-body"><form id="destinationForm" class="vstack gap-2"><input class="form-control" name="student_no" placeholder="学生学号" required><select class="form-select" name="destination_type"><option value="employment">就业</option><option value="further_study">升学</option><option value="entrepreneurship">创业</option><option value="other">其他</option></select><input class="form-control" name="organization" placeholder="单位或学校"><textarea class="form-control" name="detail" placeholder="补充说明"></textarea><button class="btn btn-primary">保存去向</button></form></div></div></div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">办理说明</div><div class="card-body text-muted">请假审批需要填写意见；资助审批、公告、宿舍、奖惩和毕业去向均会记录操作人员。待办清单默认只显示待审批记录。</div></div></div>
+</div>
+  <div class="col-lg-6"><div class="card h-100"><div class="card-header">辅导员归属维护</div><div class="card-body"><form id="counselorAssignmentForm" class="vstack gap-2"><input class="form-control" name="student_no" placeholder="学生学号" required><input class="form-control" name="counselor_staff_no" placeholder="辅导员工号" required><button class="btn btn-primary">保存辅导员归属</button></form><div class="text-muted small mt-2">高风险心理预警仅推送至此处维护的对应辅导员。</div></div></div></div>
+{% else %}
+<div class="alert alert-info">当前身份可查看与本人相关的学生事务；请假和资助由学生事务部门统一审批。</div>
+{% endif %}
+{% if principal.role in ['admin', 'student_affairs'] %}
+<div class="card mt-3">
+  <div class="card-header">待分配心理风险预警</div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>学号</th><th>风险级别</th><th>触发时间</th><th>提示</th></tr></thead>
+        <tbody id="unassignedRiskAlerts"><tr><td colspan="4" class="text-center text-muted py-3">正在加载…</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card-footer text-muted small">请使用上方“辅导员归属维护”将学生分配给已启用辅导员；系统会转交最小必要预警，不包含聊天原文。</div>
+</div>
+{% endif %}
+<div id="affairsNotice" class="alert d-none mt-3"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const notice = document.getElementById('affairsNotice');
+function show(text, type='info') { notice.className = `alert alert-${type} mt-3`; notice.textContent=text; }
+async function postForm(id, url) { document.getElementById(id)?.addEventListener('submit', async event => { event.preventDefault(); const body = Object.fromEntries(new FormData(event.currentTarget).entries()); const response = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); const data=await response.json(); if(!response.ok) return show(data.detail||'提交失败','danger'); event.currentTarget.reset(); show('提交成功','success'); }); }
+postForm('leaveForm','/api/student-affairs/leaves'); postForm('aidForm','/api/student-affairs/aid-applications');
+async function loadDormSelection(){
+  const info=document.getElementById('dormInfo');
+  const roomSelect=document.getElementById('dormRoom');
+  if(!info||!roomSelect)return;
+  const current=await fetch('/api/student-affairs/me/dorm');
+  if(current.ok){const dorm=await current.json();info.textContent=`${dorm.building} ${dorm.room_no} 室 ${dorm.bed_no||''} 床`;}
+  else info.textContent='暂未分配宿舍';
+  const roomsResponse=await fetch('/api/student-affairs/dorm-rooms');
+  const roomsData=await roomsResponse.json();
+  roomSelect.innerHTML='';
+  (roomsData.items||[]).forEach(room=>{const option=document.createElement('option');option.value=room.id;option.textContent=`${room.building} ${room.room_no} 室（剩余 ${room.remaining_beds} 床）`;roomSelect.append(option);});
+  if(!roomSelect.options.length){roomSelect.innerHTML='<option value="">暂无可选寝室</option>';document.getElementById('dormSelectionForm').querySelector('button').disabled=true;}
+}
+document.getElementById('dormSelectionForm')?.addEventListener('submit',async event=>{event.preventDefault();const notice=document.getElementById('dormSelectionNotice');const roomId=document.getElementById('dormRoom').value;const bedNo=document.getElementById('dormBed').value;if(!roomId)return;const response=await fetch('/api/student-affairs/me/dorm-selection',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room_id:Number(roomId),bed_no:bedNo})});const data=await response.json();if(!response.ok){notice.className='small mt-2 text-danger';notice.textContent=data.detail||'寝室选择失败';return;}notice.className='small mt-2 text-success';notice.textContent=data.message||'寝室选择成功';loadDormSelection();});
+loadDormSelection().catch(()=>{const el=document.getElementById('dormInfo');if(el)el.textContent='宿舍信息加载失败';});
+fetch('/api/student-affairs/announcements').then(r=>r.json()).then(d=>{ const el=document.getElementById('announcements'); if(!el) return; el.innerHTML=''; const items=(d.items||[]).slice(0,5); if(!items.length) { el.textContent='暂无公告'; return; } items.forEach(item=>{ const row=document.createElement('div'); row.className='mb-2'; const title=document.createElement('strong'); title.textContent=item.title; const content=document.createElement('div'); content.className='text-muted'; content.textContent=item.content; row.append(title, content); el.append(row); }); }).catch(()=>{});
+async function requestJson(url, options={}) { const response=await fetch(url, options); const data=await response.json(); if(!response.ok) throw new Error(data.detail||'操作失败'); return data; }
+function reviewButton(url, payload, onDone) { const button=document.createElement('button'); button.className='btn btn-sm btn-outline-primary'; button.textContent='办理'; button.onclick=async()=>{ const approved=window.confirm('确认通过此申请？选择“取消”将驳回。'); try { await requestJson(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload(approved))}); show('已办理','success'); onDone(); } catch(error) { show(error.message,'danger'); } }; return button; }
+function renderPending(target, items, fields, endpoint, payload) { const body=document.getElementById(target); if(!body) return; body.innerHTML=''; items.forEach(item=>{ const row=document.createElement('tr'); fields(item).forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);}); const action=document.createElement('td'); action.append(reviewButton(`${endpoint}/${item.id}/review`,approved=>payload(approved),loadStaffWorkbench)); row.append(action); body.append(row); }); if(!body.children.length) body.innerHTML='<tr><td colspan="4" class="text-center text-muted py-3">暂无待审批记录</td></tr>'; }
+async function loadStaffWorkbench() { try { const [leaveData, aidData]=await Promise.all([requestJson('/api/student-affairs/leaves?status=pending'),requestJson('/api/student-affairs/aid-applications?status=pending')]); renderPending('pendingLeaves',leaveData.items,item=>[item.student_no,`${item.starts_on} 至 ${item.ends_on}`,item.reason],'/api/student-affairs/leaves',approved=>({status:approved?'approved':'rejected',comment:window.prompt('审批意见','已阅')||'已办理'})); renderPending('pendingAid',aidData.items,item=>[item.student_no,item.aid_type,item.reason],'/api/student-affairs/aid-applications',approved=>({status:approved?'approved':'rejected'})); } catch(error) { show(error.message,'danger'); } }
+function bindStaffForm(id, build) { const form=document.getElementById(id); if(!form) return; form.addEventListener('submit',async event=>{event.preventDefault(); const values=Object.fromEntries(new FormData(form).entries()); try { const {url, method='POST', body}=build(values); await requestJson(url,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}); form.reset(); show('已保存','success'); } catch(error) { show(error.message,'danger'); }}); }
+bindStaffForm('announcementForm',values=>({url:'/api/student-affairs/announcements',body:values}));
+bindStaffForm('dormForm',values=>({url:`/api/student-affairs/dorms/${encodeURIComponent(values.student_no)}`,method:'PUT',body:{building:values.building,room_no:values.room_no,bed_no:values.bed_no||null}}));
+bindStaffForm('rewardForm',values=>({url:'/api/student-affairs/reward-punishments',body:values}));
+bindStaffForm('destinationForm',values=>({url:`/api/student-affairs/graduate-destinations/${encodeURIComponent(values.student_no)}`,method:'PUT',body:{destination_type:values.destination_type,organization:values.organization||null,detail:values.detail||null}}));
+bindStaffForm('counselorAssignmentForm',values=>({url:`/api/student-affairs/counselor-assignments/${encodeURIComponent(values.student_no)}`,method:'PUT',body:{counselor_staff_no:values.counselor_staff_no}}));
+if(document.getElementById('pendingLeaves')) loadStaffWorkbench();
+</script>
+<script>
+async function loadUnassignedRiskAlerts() {
+  const body = document.getElementById('unassignedRiskAlerts');
+  if (!body) return;
+  try {
+    const response = await fetch('/api/student-affairs/unassigned-risk-alerts?page_size=20');
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || '风险预警加载失败');
+    body.innerHTML = '';
+    (data.items || []).forEach(item => {
+      const row = document.createElement('tr');
+      [item.student_no, item.risk_level, item.created_at, '请分配辅导员后转交'].forEach(value => {
+        const cell = document.createElement('td');
+        cell.textContent = value;
+        row.append(cell);
+      });
+      body.append(row);
+    });
+    if (!body.children.length) body.innerHTML = '<tr><td colspan="4" class="text-center text-success py-3">暂无待分配风险预警</td></tr>';
+  } catch (error) {
+    body.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-3">加载失败</td></tr>';
+    show(error.message, 'danger');
+  }
+}
+loadUnassignedRiskAlerts();
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}管理模块 · 山河大学{% endblock %}
+{% block breadcrumb %}管理模块{% endblock %}
+
+{% block content %}
+<section class="sh-dashboard-heading">
+    <div>
+        <span class="sh-eyebrow">CAMPUS SYSTEM ADMINISTRATION</span>
+        <h1>校园系统管理</h1>
+        <p>请选择需要维护的业务模块。学生和教师相关操作分别进入对应模块处理。</p>
+    </div>
+</section>
+
+<section class="sh-admin-module-grid" aria-label="管理员业务模块">
+    {% for module in modules %}
+    <a class="sh-admin-module-card" href="{{ module.href }}">
+        <span class="sh-admin-module-icon"><i class="bi {{ module.icon }}"></i></span>
+        <span><strong>{{ module.label }}</strong><small>进入{{ module.label }}</small></span>
+        <i class="bi bi-arrow-up-right"></i>
+    </a>
+    {% endfor %}
+</section>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}教师工作台 · 山河大学{% endblock %}
+{% block breadcrumb %}教师工作台{% endblock %}
+{% block content %}
+<section class="sh-dashboard-heading">
+    <div><div class="sh-eyebrow"><span></span> TEACHING WORKSPACE</div><h1>教师工作台</h1><p>查看本人授权班级的教学概况、成绩趋势与学生名单。</p></div>
+    <a class="btn btn-primary" href="/pages/grade-entry"><i class="bi bi-plus-lg me-2"></i>录入成绩</a>
+</section>
+<section class="sh-dashboard-banner">
+    <div class="sh-banner-symbol"><i class="bi bi-mortarboard"></i></div>
+    <div><span class="sh-banner-kicker">今日教学状态</span><h2>把每一堂课，讲成学生记得住的光</h2><p id="teacherOverview">正在读取你的授权班级与学生数据…</p></div>
+    <div class="sh-banner-state"><span></span>权限已验证</div>
+</section>
+<section class="sh-lower-grid sh-teacher-grid">
+    <article class="sh-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">MY CLASSES</span><h3>授权班级</h3></div><i class="bi bi-people"></i></div><div id="classList" class="sh-class-list"><div class="sh-loading-line">正在加载班级…</div></div></article>
+    <article class="sh-panel"><div class="sh-panel-head"><div><span class="sh-panel-kicker">CLASS INSIGHT</span><h3>班级成绩分析</h3></div><i class="bi bi-graph-up-arrow"></i></div><div id="scoreAnalysis" class="sh-analysis"><div class="sh-empty-panel">请选择左侧班级查看分析</div></div></article>
+</section>
+<article class="sh-panel sh-teacher-students"><div class="sh-panel-head"><div><span class="sh-panel-kicker">STUDENT LIST</span><h3>学生名单</h3></div><span class="sh-section-count">仅展示本人权限范围内的数据</span></div><div class="table-responsive"><table class="table mb-0 align-middle"><thead><tr><th>学号</th><th>姓名</th><th>性别</th><th>年龄</th><th>平均分</th></tr></thead><tbody id="studentRows"><tr><td colspan="5" class="text-center text-muted py-4">请选择一个班级</td></tr></tbody></table></div></article>
+{% endblock %}
+{% block scripts %}
+<script>
+const overviewNode = document.getElementById('teacherOverview');
+const classList = document.getElementById('classList');
+const studentRows = document.getElementById('studentRows');
+const scoreAnalysis = document.getElementById('scoreAnalysis');
+async function fetchJson(url) { const response = await fetch(url); if (!response.ok) throw new Error('数据加载失败，请稍后重试'); return response.json(); }
+async function loadClass(classId) {
+    const [students, analysis] = await Promise.all([fetchJson(`/api/teacher/classes/${classId}/students`), fetchJson(`/api/teacher/classes/${classId}/score-analysis`)]);
+    studentRows.innerHTML = students.map(item => `<tr><td>${item.student_no}</td><td>${item.name}</td><td>${item.gender || '-'}</td><td>${item.age || '-'}</td><td><strong>${item.average_score ?? '-'}</strong></td></tr>`).join('') || '<tr><td colspan="5" class="text-center text-muted py-4">暂无学生数据</td></tr>';
+    scoreAnalysis.innerHTML = `<div class="sh-analysis-grid"><div><strong>${analysis.student_count}</strong><span>学生人数</span></div><div><strong>${analysis.attention_count}</strong><span>需要关注</span></div><div><strong>${analysis.trend.map(x => x.average_score).join(' / ') || '-'}</strong><span>阶段均分</span></div></div>`;
+}
+async function initTeacherDashboard() {
+    try {
+        const data = await fetchJson('/api/teacher/workbench/overview');
+        overviewNode.textContent = `共 ${data.class_count} 个班级，${data.student_count} 名学生处于你的教学范围内`;
+        classList.innerHTML = data.classes.map(item => `<button class="sh-class-item" type="button" data-id="${item.id}"><span><i class="bi bi-building"></i>${item.name}</span><b>${item.student_count}</b></button>`).join('') || '<div class="sh-empty-panel">暂无授权班级</div>';
+        classList.querySelectorAll('[data-id]').forEach(button => button.addEventListener('click', () => { classList.querySelectorAll('.is-active').forEach(item => item.classList.remove('is-active')); button.classList.add('is-active'); loadClass(button.dataset.id); }));
+    } catch (error) { overviewNode.textContent = error.message; }
+}
+initTeacherDashboard();
+</script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}成绩审核{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h3 class="mb-1">成绩审核</h3><div class="text-muted">审核通过后，教师不能再修改该条成绩；学生成绩单只展示已审核记录。</div></div><a class="btn btn-outline-primary" href="/pages/university-dashboard">返回工作台</a></div>
+<div class="card"><div class="card-header d-flex justify-content-between"><span>待审核成绩</span><button id="refreshGrades" class="btn btn-sm btn-outline-primary">刷新</button></div><div class="card-body p-0"><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>课程</th><th>学号</th><th>姓名</th><th>成绩</th><th>状态</th><th>操作</th></tr></thead><tbody id="gradeRows"><tr><td colspan="6" class="text-center text-muted py-4">正在加载…</td></tr></tbody></table></div></div></div>
+<div id="approvalNotice" class="alert d-none mt-3"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+const gradeRows=document.getElementById('gradeRows');const approvalNotice=document.getElementById('approvalNotice');
+function showApprovalNotice(message,type='info'){approvalNotice.className=`alert alert-${type} mt-3`;approvalNotice.textContent=message;}
+async function approvalRequest(url,options={}){const response=await fetch(url,options);const data=await response.json();if(!response.ok)throw new Error(data.detail||'操作失败');return data;}
+async function approveGrade(gradeId){try{await approvalRequest(`/api/university/grades/${gradeId}/approve`,{method:'POST'});showApprovalNotice('成绩已审核通过，记录已锁定。','success');loadGrades();}catch(error){showApprovalNotice(error.message,'danger');}}
+async function loadGrades(){try{const data=await approvalRequest('/api/university/grades?status=submitted&page_size=100');gradeRows.innerHTML='';data.items.forEach(item=>{const row=document.createElement('tr');[`${item.course_code} ${item.course_name}`,item.student_no,item.student_name,item.score,item.status].forEach(value=>{const cell=document.createElement('td');cell.textContent=value;row.append(cell);});const action=document.createElement('td');const button=document.createElement('button');button.className='btn btn-sm btn-success';button.textContent='审核通过';button.onclick=()=>approveGrade(item.grade_id);action.append(button);row.append(action);gradeRows.append(row);});if(!gradeRows.children.length)gradeRows.innerHTML='<tr><td colspan="6" class="text-center text-muted py-4">暂无待审核成绩</td></tr>';}catch(error){showApprovalNotice(error.message,'danger');}}
+document.getElementById('refreshGrades').addEventListener('click',loadGrades);loadGrades();
+</script>
+{% endblock %}

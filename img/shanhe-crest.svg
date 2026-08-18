@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-labelledby="title desc">
+  <title id="title">山河大学校徽</title>
+  <desc id="desc">以山峰与水纹为主题的山河大学校徽</desc>
+  <defs>
+    <linearGradient id="crest" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#167d82"/>
+      <stop offset="1" stop-color="#0f3f5c"/>
+    </linearGradient>
+  </defs>
+  <circle cx="120" cy="120" r="111" fill="#fffdf9" stroke="#c6923f" stroke-width="5"/>
+  <circle cx="120" cy="120" r="94" fill="none" stroke="#d9e8e5" stroke-width="2"/>
+  <path d="M41 142 83 91l26 29 32-48 58 70v17H41z" fill="url(#crest)"/>
+  <path d="m41 151 36-12 31 9 33-14 59 17" fill="none" stroke="#e9c37a" stroke-width="5" stroke-linecap="round"/>
+  <path d="M54 165c18-8 36-8 54 0s36 8 54 0 36-8 54 0" fill="none" stroke="#167d82" stroke-width="4" stroke-linecap="round"/>
+  <path d="M65 179c15-6 30-6 45 0s30 6 45 0 30-6 45 0" fill="none" stroke="#b7d7d1" stroke-width="3" stroke-linecap="round"/>
+  <text x="120" y="55" fill="#0f2d46" font-family="serif" font-size="20" font-weight="700" text-anchor="middle">山河大学</text>
+  <text x="120" y="211" fill="#0f2d46" font-family="serif" font-size="10" letter-spacing="2" text-anchor="middle">崇山仰止 · 纳川致远</text>
+</svg>
